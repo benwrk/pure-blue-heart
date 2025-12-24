@@ -2,22 +2,54 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>H10 ECG V5.9</title>
+    <title>H10 ECG</title>
     <style>
         body { background-color: #000; color: #0f0; font-family: 'Consolas', monospace; margin: 0; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
         header { background: #051005; padding: 10px 20px; border-bottom: 2px solid #0f0; display: flex; justify-content: space-between; align-items: center; z-index: 10; }
-        button { background: #003300; color: #0f0; border: 1px solid #0f0; padding: 5px 10px; cursor: pointer; font-weight: bold; font-family: inherit; transition: 0.2s; font-size: 0.8rem; }
-        button:hover { background: #0f0; color: #000; box-shadow: 0 0 10px #0f0; }
-        button:disabled { background: #222; color: #555; border-color: #444; box-shadow: none; }
+        
+        button, select { background: #003300; color: #0f0; border: 1px solid #0f0; padding: 5px 10px; cursor: pointer; font-weight: bold; font-family: inherit; transition: 0.2s; font-size: 0.8rem; }
+        button:hover, select:hover { background: #0f0; color: #000; box-shadow: 0 0 10px #0f0; }
+        button:disabled { background: #222; color: #555; border-color: #444; box-shadow: none; cursor: not-allowed; opacity: 0.5; }
+        select { width: 100%; margin-top: 5px; text-align: center; }
+        
         #container { flex: 1; display: flex; position: relative; }
-        #chart-area { flex: 1; position: relative; background: linear-gradient(rgba(0, 50, 0, 0.2) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 50, 0, 0.2) 1px, transparent 1px); background-size: 50px 50px; }
+        
+        #chart-area { 
+            flex: 1; 
+            position: relative; 
+            background: linear-gradient(rgba(0, 50, 0, 0.2) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 50, 0, 0.2) 1px, transparent 1px); 
+            background-size: 50px 50px; 
+        }
         canvas { display: block; width: 100%; height: 100%; }
+
+        /* LOG OVERLAY */
+        #log-overlay {
+            position: absolute; bottom: 0; right: 0;
+            width: 400px; height: 200px;
+            background: rgba(0, 10, 0, 0.95);
+            border-top: 2px solid #0f0; border-left: 2px solid #0f0;
+            padding: 10px;
+            font-size: 0.7rem; color: #0c0;
+            overflow-y: auto; font-family: monospace;
+            z-index: 20; display: none;
+            box-shadow: -5px -5px 15px rgba(0, 50, 0, 0.5);
+        }
+        #log-toggle-btn { position: absolute; bottom: 10px; right: 10px; z-index: 21; opacity: 0.7; }
+        #log-toggle-btn:hover { opacity: 1; }
+        
         #sidebar { width: 320px; background: #020502; border-left: 2px solid #0f0; padding: 15px; display: flex; flex-direction: column; gap: 15px; z-index: 10; overflow-y: auto; }
         .panel { border: 1px solid #0a0; padding: 10px; text-align: center; background: #001100; }
         
-        .bpm-row { position: relative; display: flex; justify-content: center; align-items: center; height: 60px; margin: 5px 0; gap: 15px; }
-        .val-big { font-size: 3.5rem; font-weight: bold; text-shadow: 0 0 10px #0f0; line-height: 1; z-index: 1; position: relative; }
-        #beatCanvas { width: 30px; height: 30px; display: block; }
+        /* TRUE CENTER HR */
+        .bpm-row { 
+            position: relative; display: flex; justify-content: center; align-items: center; 
+            height: 80px; margin: 5px 0; 
+        }
+        .val-big { font-size: 4rem; font-weight: bold; text-shadow: 0 0 10px #0f0; line-height: 1; z-index: 1; }
+        #beatCanvas { 
+            position: absolute; left: calc(50% + 60px); top: 50%; transform: translateY(-50%);
+            width: 35px; height: 35px; display: block; 
+        }
 
         .label { font-size: 0.7rem; color: #0a0; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 1px; }
         .stat-row { display: flex; justify-content: space-between; font-size: 0.75rem; color: #8f8; margin-top: 3px; border-bottom: 1px solid #030; padding-bottom: 2px; }
@@ -27,12 +59,20 @@
         .toggle-btn { width: 100%; padding: 5px; font-size: 0.8rem; margin-top: 5px; }
         .toggle-on { background: #0f0; color: #000; }
         .toggle-off { background: #300; color: #888; border-color: #500; }
+
+        .mode-select { display: flex; gap: 5px; margin-bottom: 5px; }
+        .mode-btn { flex: 1; font-size: 0.7rem; padding: 3px; border: 1px solid #060; color: #080; background: #020; }
+        .mode-btn.active { background: #0f0; color: #000; border-color: #0f0; font-weight: bold; }
+
+        .log-entry { margin-bottom: 4px; border-bottom: 1px dotted #030; padding-bottom: 2px; }
+        .log-time { color: #080; margin-right: 5px; }
+        .log-data { color: #cfc; display: block; margin-left: 15px; white-space: pre-wrap; }
     </style>
 </head>
 <body>
 
 <header>
-    <div>⚡ H10 ECG V5.9</div>
+    <div>🛜 H10 ECG</div>
     <div id="status">DISCONNECTED</div>
     <button id="btnConnect" style="padding: 8px 16px;">CONNECT H10</button>
 </header>
@@ -40,6 +80,14 @@
 <div id="container">
     <div id="chart-area">
         <canvas id="ecgCanvas"></canvas>
+        <button id="log-toggle-btn" onclick="toggleLog()">SHOW LOG</button>
+        <div id="log-overlay">
+            <div style="position: sticky; top:0; background:#010; padding:5px; border-bottom:1px solid #0f0; display:flex; justify-content:space-between;">
+                <span>SYSTEM LOG</span>
+                <button onclick="clearLog()" style="padding:2px 5px; font-size:0.6rem;">CLEAR</button>
+            </div>
+            <div id="log-content"></div>
+        </div>
     </div>
     
     <div id="sidebar">
@@ -47,11 +95,63 @@
             <div class="label">HEART RATE</div>
             <div class="bpm-row">
                 <div id="hrVal" class="val-big">--</div>
-                <canvas id="beatCanvas" width="60" height="60"></canvas>
+                <canvas id="beatCanvas" width="70" height="70"></canvas>
             </div>
-            <div class="label">BPM</div>
+            <div style="margin-top: 10px; border-top: 1px dashed #030; padding-top: 5px;">
+                <div class="label" style="text-align: left;">HR SOURCE:</div>
+                <select id="hrSourceSelect" onchange="updateHrSource()">
+                    <option value="ble">BLE SERVICE (REALTIME)</option>
+                    <option value="ecg">ECG ANALYSIS (SYNCED)</option>
+                </select>
+                <div id="hrDebug" style="font-size: 0.6rem; color: #555; text-align: left; margin-top:2px;">Mode: Standard BLE</div>
+            </div>
         </div>
         
+        <div class="panel">
+            <div class="label">SWEEP SPEED (MM/S)</div>
+            <div class="control-row">
+                <button onclick="adjSweep(-2.5)">-2.5</button>
+                <span id="sweepVal" class="control-val">25.0</span>
+                <button onclick="adjSweep(2.5)">+2.5</button>
+            </div>
+            <div style="font-size: 0.6rem; color: #666; margin-top:2px;">(Min: 12.5 | Max: 50.0)</div>
+        </div>
+
+        <div class="panel">
+            <div class="label">GAIN CONTROL</div>
+            <div class="mode-select">
+                <button id="modeManual" class="mode-btn active" onclick="setGainMode(false)">MANUAL</button>
+                <button id="modeAuto" class="mode-btn" onclick="setGainMode(true)">AUTO</button>
+            </div>
+            <div id="manualControls">
+                <div class="control-row">
+                    <button onclick="adjGain(-1)">OUT</button>
+                    <span id="gainVal" class="control-val">20.0x</span> 
+                    <button onclick="adjGain(1)">IN</button>
+                </div>
+            </div>
+            <div id="autoControls" style="display:none;">
+                <div class="label" style="margin-top:5px; font-size:0.6rem;">AUTO TARGET HEIGHT</div>
+                <div class="control-row">
+                    <button onclick="adjAgcTarget(-10)">-10px</button>
+                    <span id="agcTargetVal" class="control-val">150px</span>
+                    <button onclick="adjAgcTarget(10)">+10px</button>
+                </div>
+                <div id="agcCurrentGain" style="font-size: 0.6rem; color: #8f8; margin-top: 3px; text-align:right;">CURRENT: --x</div>
+            </div>
+        </div>
+
+        <div class="panel">
+            <div class="label">AUDIO SETTINGS</div>
+            <button id="btnSound" class="toggle-btn toggle-on" onclick="toggleSound()">SOUND: ON</button>
+            <select id="soundType">
+                <option value="simple">TYPE: SIMPLE BEEP</option>
+                <option value="medical">TYPE: MEDICAL</option>
+                <option value="thud">TYPE: THUD</option>
+                <option value="8bit">TYPE: 8-BIT</option>
+            </select>
+        </div>
+
         <div class="panel">
             <div class="label">TUNING: TARGET LATENCY</div>
             <div class="control-row">
@@ -59,31 +159,15 @@
                 <span id="dispTarget" class="control-val">50 ms</span>
                 <button onclick="adjTarget(10)">+10ms</button>
             </div>
-            <div style="font-size: 0.6rem; color: #666; margin-top:2px;">(Lower=Fast, Higher=Smooth)</div>
         </div>
 
         <div class="panel">
-            <div class="label">TUNING: SERVO FORCE (GAIN)</div>
+            <div class="label">TUNING: SERVO FORCE</div>
             <div class="control-row">
                 <button onclick="adjForce(-0.005)">-0.005</button>
                 <span id="dispForce" class="control-val">0.010</span>
                 <button onclick="adjForce(0.005)">+0.005</button>
             </div>
-            <div style="font-size: 0.6rem; color: #666; margin-top:2px;">(Lower=Gentle, Higher=Aggressive)</div>
-        </div>
-
-        <div class="panel">
-            <div class="label">ZOOM (Y-AXIS)</div>
-            <div class="control-row">
-                <button onclick="adjGain(-1)">ZOOM OUT</button>
-                <span id="gainVal" class="control-val">1.0x</span>
-                <button onclick="adjGain(1)">ZOOM IN</button>
-            </div>
-        </div>
-        
-        <div class="panel">
-            <div class="label">AUDIO</div>
-            <button id="btnSound" class="toggle-btn toggle-on" onclick="toggleSound()">SOUND: ON</button>
         </div>
 
         <div class="panel">
@@ -109,79 +193,198 @@
     const beatCanvas = document.getElementById('beatCanvas');
     const beatCtx = beatCanvas.getContext('2d');
 
+    // QUEUE
     let queue = [];
     const H10_RATE = 130;       
     let screenBuffer = []; 
-    let screenCursor = 0;
+    let markerBuffer = []; 
+    
+    let screenCursor = 0.0;
     let lastFrameTime = 0;
     let timeAccumulator = 0;
     let currentPlaybackRate = H10_RATE; 
     let prevRaw = 0, prevFiltered = 0;
     let dcOffset = 0;
-    let gainDivisor = 300;
-    let gainMult = 1.0;
     
-    // --- UPDATED DEFAULTS ---
-    let TARGET_LATENCY = 50;   // Hardcore Low Latency
-    let SERVO_GAIN = 0.01;     // Very Gentle Tuning
+    // GAIN & AGC
+    let gainMult = 20.0;    
+    let gainDivisor = 300 / gainMult; 
+    let isAutoGain = false; 
+    let signalMin = 0, signalMax = 0, agcTargetHeight = 150; 
+    const MAX_ECG_VAL = 3000; // Clamp artifact > 3mV
+
+    // SWEEP
+    let sweepSpeedMm = 25.0; 
+    let pixelsPerSample = 0.73;
+
+    // HR
+    let hrSource = 'ble'; 
+    let lastBleBpm = 0;
+    let rrIntervals = [];
+    
+    // QRS
+    let qrsThreshold = 50000; 
+    let qrsLastSample = 0;
+    let integralBuf = [];
+    const INTEGRAL_WIN_SIZE = 5; 
+    const QRS_REFRACTORY_SAMPLES = 32; 
+    let totalSamplesProcessed = 0;
+    let lastBeatSampleIndex = 0;
+
+    // TUNING
+    let TARGET_LATENCY = 50;   
+    let SERVO_GAIN = 0.01;     
 
     let beatIntensity = 0.0; 
     const BEAT_DECAY = 0.05; 
     let audioCtx = null;
     let soundEnabled = true;
+    let isLogVisible = false;
 
-    // --- UPDATED TUNING FUNCTIONS ---
-    window.adjTarget = (delta) => {
-        TARGET_LATENCY += delta;
-        if (TARGET_LATENCY < 10) TARGET_LATENCY = 10; // Allow super low
-        if (TARGET_LATENCY > 2000) TARGET_LATENCY = 2000;
-        document.getElementById('dispTarget').innerText = TARGET_LATENCY + " ms";
+    // --- LOGIC ---
+    window.adjSweep = (delta) => {
+        sweepSpeedMm += delta;
+        if (sweepSpeedMm < 12.5) sweepSpeedMm = 12.5;
+        if (sweepSpeedMm > 50.0) sweepSpeedMm = 50.0;
+        pixelsPerSample = (sweepSpeedMm * 3.78) / 130; 
+        document.getElementById('sweepVal').innerText = sweepSpeedMm.toFixed(1);
+    };
+    adjSweep(0);
+
+    window.updateHrSource = () => {
+        hrSource = document.getElementById('hrSourceSelect').value;
+        const info = hrSource === 'ble' ? "Using Standard BLE Service (Fast)" : "Using ECG Analysis (Synced)";
+        document.getElementById('hrDebug').innerText = info;
     };
 
-    window.adjForce = (delta) => {
-        SERVO_GAIN += delta;
-        if (SERVO_GAIN < 0.001) SERVO_GAIN = 0.001;
-        if (SERVO_GAIN > 1.0) SERVO_GAIN = 1.0;
-        document.getElementById('dispForce').innerText = SERVO_GAIN.toFixed(3);
+    function triggerBeat(bpm) {
+        document.getElementById('hrVal').innerText = bpm;
+        beatIntensity = 1.0;
+        playBeep();
+    }
+
+    function log(msg, data = null) {
+        const d = document.getElementById('log-content');
+        while (d.childElementCount >= 50) d.removeChild(d.firstElementChild);
+        const time = new Date().toLocaleTimeString().split(' ')[0];
+        let dataHtml = '';
+        if (data !== null) {
+            try { if (typeof data === 'object') dataHtml = `<span class="log-data">${JSON.stringify(data)}</span>`; else dataHtml = `<span class="log-data">Value: ${data}</span>`; } catch (e) {}
+        }
+        d.innerHTML += `<div class="log-entry"><span class="log-time">[${time}]</span> ${msg}${dataHtml}</div>`;
+        if (isLogVisible) document.getElementById('log-overlay').scrollTop = document.getElementById('log-overlay').scrollHeight;
+    }
+
+    window.setGainMode = (auto) => {
+        isAutoGain = auto;
+        document.getElementById('modeManual').classList.toggle('active', !auto);
+        document.getElementById('modeAuto').classList.toggle('active', auto);
+        document.getElementById('manualControls').style.display = auto ? 'none' : 'block';
+        document.getElementById('autoControls').style.display = auto ? 'block' : 'none';
+        if(auto) { signalMin = 0; signalMax = 0; } else { gainDivisor = 300 / gainMult; }
+        log(auto ? "Switched to AUTO GAIN" : "Switched to MANUAL GAIN");
     };
 
     window.adjGain = (dir) => {
-        if (dir > 0) { gainDivisor /= 1.25; gainMult *= 1.25; }
-        else { gainDivisor /= 0.8; gainMult *= 0.8; }
+        if (isAutoGain) return;
+        if (dir > 0) gainMult *= 1.25; else gainMult /= 1.25;
+        gainDivisor = 300 / gainMult; 
         document.getElementById('gainVal').innerText = gainMult.toFixed(2) + "x";
     };
 
-    function initAudio() {
-        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        if (audioCtx.state === 'suspended') audioCtx.resume();
+    window.adjAgcTarget = (delta) => {
+        agcTargetHeight += delta;
+        if (agcTargetHeight < 50) agcTargetHeight = 50;
+        document.getElementById('agcTargetVal').innerText = agcTargetHeight + "px";
+    };
+
+    function updateAGC(sampleValue) {
+        if (!isAutoGain) return;
+        
+        // 1. INPUT CLAMP (FIRST LINE OF DEFENSE)
+        // If sampleValue is wildly huge (artifact), ignore it for AGC purposes
+        if (Math.abs(sampleValue) > MAX_ECG_VAL) return;
+
+        // 2. Normal Decay
+        if (sampleValue > signalMax) signalMax = sampleValue;
+        else signalMax -= (signalMax - sampleValue) * 0.005;
+        
+        if (sampleValue < signalMin) signalMin = sampleValue;
+        else signalMin += (sampleValue - signalMin) * 0.005;
+
+        let amplitude = signalMax - signalMin;
+        if (amplitude < 100) amplitude = 100; 
+
+        // 3. SMART RECOVERY (The 10-second fix)
+        // Check current calculated divisor vs ideal divisor
+        let idealDivisor = amplitude / agcTargetHeight;
+        if (idealDivisor < 0.1) idealDivisor = 0.1;
+        
+        // If we are way zoomed out (gainDivisor huge) but signal is small (idealDivisor small)
+        // Collapse faster!
+        let smoothing = 0.95; 
+        if (gainDivisor > idealDivisor * 5) {
+            smoothing = 0.8; // Fast collapse
+        }
+
+        gainDivisor = (gainDivisor * smoothing) + (idealDivisor * (1-smoothing));
+        
+        let currentMult = 300 / gainDivisor;
+        document.getElementById('agcCurrentGain').innerText = "CURRENT: " + currentMult.toFixed(1) + "x";
     }
+    
+    function checkQRS(val) {
+        totalSamplesProcessed++;
+        let slope = val - qrsLastSample;
+        qrsLastSample = val;
+        let sq = slope * slope;
+        integralBuf.push(sq);
+        if (integralBuf.length > INTEGRAL_WIN_SIZE) integralBuf.shift();
+        let integrated = 0;
+        for(let v of integralBuf) integrated += v;
+        integrated /= integralBuf.length; 
+
+        qrsThreshold *= 0.999; 
+        if (qrsThreshold < 5000) qrsThreshold = 5000; 
+
+        if (integrated > qrsThreshold && (totalSamplesProcessed - lastBeatSampleIndex > QRS_REFRACTORY_SAMPLES)) {
+            let samplesDiff = totalSamplesProcessed - lastBeatSampleIndex;
+            lastBeatSampleIndex = totalSamplesProcessed;
+            qrsThreshold = integrated * 0.8; 
+            let seconds = samplesDiff / 130.0;
+            let instBpm = 60 / seconds;
+            if (instBpm > 30 && instBpm < 240) {
+                rrIntervals.push(instBpm);
+                if (rrIntervals.length > 5) rrIntervals.shift();
+                let avgBpm = rrIntervals.reduce((a,b)=>a+b, 0) / rrIntervals.length;
+                return { isBeat: true, bpm: Math.round(avgBpm) };
+            }
+        }
+        return { isBeat: false, bpm: 0 };
+    }
+
+    window.adjTarget = (delta) => { TARGET_LATENCY += delta; if (TARGET_LATENCY < 10) TARGET_LATENCY = 10; if (TARGET_LATENCY > 2000) TARGET_LATENCY = 2000; document.getElementById('dispTarget').innerText = TARGET_LATENCY + " ms"; };
+    window.adjForce = (delta) => { SERVO_GAIN += delta; if (SERVO_GAIN < 0.001) SERVO_GAIN = 0.001; if (SERVO_GAIN > 1.0) SERVO_GAIN = 1.0; document.getElementById('dispForce').innerText = SERVO_GAIN.toFixed(3); };
+    window.toggleLog = () => { isLogVisible = !isLogVisible; const overlay = document.getElementById('log-overlay'); const btn = document.getElementById('log-toggle-btn'); if (isLogVisible) { overlay.style.display = 'block'; btn.innerText = 'HIDE LOG'; overlay.scrollTop = overlay.scrollHeight; } else { overlay.style.display = 'none'; btn.innerText = 'SHOW LOG'; } };
+    window.clearLog = () => document.getElementById('log-content').innerHTML = '';
+
+    function initAudio() { if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); if (audioCtx.state === 'suspended') audioCtx.resume(); }
 
     function playBeep() {
         if (!soundEnabled || !audioCtx) return;
+        const type = document.getElementById('soundType').value;
         const osc = audioCtx.createOscillator();
         const gainNode = audioCtx.createGain();
         osc.connect(gainNode);
         gainNode.connect(audioCtx.destination);
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(880, audioCtx.currentTime); 
-        gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime); 
-        gainNode.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.15); 
-        osc.start();
-        osc.stop(audioCtx.currentTime + 0.15);
+        const now = audioCtx.currentTime;
+        if (type === 'simple') { osc.type = 'sine'; osc.frequency.setValueAtTime(1000, now); gainNode.gain.setValueAtTime(0.1, now); gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.1); osc.start(now); osc.stop(now + 0.1); }
+        else if (type === 'medical') { osc.type = 'sine'; osc.frequency.setValueAtTime(880, now); gainNode.gain.setValueAtTime(0.1, now); gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.15); osc.start(now); osc.stop(now + 0.15); }
+        else if (type === 'thud') { osc.type = 'triangle'; osc.frequency.setValueAtTime(150, now); osc.frequency.exponentialRampToValueAtTime(50, now + 0.1); gainNode.gain.setValueAtTime(0.3, now); gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.2); osc.start(now); osc.stop(now + 0.2); }
+        else if (type === '8bit') { osc.type = 'square'; osc.frequency.setValueAtTime(440, now); gainNode.gain.setValueAtTime(0.05, now); gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.1); osc.start(now); osc.stop(now + 0.1); }
     }
 
-    window.toggleSound = () => {
-        soundEnabled = !soundEnabled;
-        const btn = document.getElementById('btnSound');
-        if (soundEnabled) {
-            btn.innerText = "SOUND: ON";
-            btn.className = "toggle-btn toggle-on";
-            if (audioCtx) playBeep();
-        } else {
-            btn.innerText = "SOUND: MUTE";
-            btn.className = "toggle-btn toggle-off";
-        }
-    };
+    window.toggleSound = () => { soundEnabled = !soundEnabled; const btn = document.getElementById('btnSound'); if (soundEnabled) { btn.innerText = "SOUND: ON"; btn.className = "toggle-btn toggle-on"; if (audioCtx) playBeep(); } else { btn.innerText = "SOUND: MUTE"; btn.className = "toggle-btn toggle-off"; } };
 
     function resize() {
         const p = canvas.parentElement;
@@ -189,6 +392,7 @@
         canvas.height = p.clientHeight;
         if (screenBuffer.length !== canvas.width) {
             screenBuffer = new Float32Array(canvas.width).fill(canvas.height / 2);
+            markerBuffer = new Uint8Array(canvas.width).fill(0); 
             screenCursor = 0;
         }
     }
@@ -200,22 +404,9 @@
         const w = beatCanvas.width;
         const h = beatCanvas.height;
         const scale = 1.0; 
-        
-        beatCtx.save();
-        beatCtx.translate(w/2, h/2);
-        beatCtx.scale(scale, scale);
-        
-        beatCtx.beginPath();
-        beatCtx.moveTo(0, -10);
-        beatCtx.bezierCurveTo(-25, -30, -50, -10, 0, 32); 
-        beatCtx.bezierCurveTo(50, -10, 25, -30, 0, -10);
-        beatCtx.closePath();
-
-        const r = Math.floor(50 + (205 * beatIntensity));
-        beatCtx.fillStyle = `rgb(${r}, 0, 0)`;
-        beatCtx.shadowBlur = 0; 
-        beatCtx.fill();
-        beatCtx.restore();
+        beatCtx.save(); beatCtx.translate(w/2, h/2); beatCtx.scale(scale, scale); beatCtx.beginPath();
+        beatCtx.moveTo(0, -10); beatCtx.bezierCurveTo(-25, -30, -50, -10, 0, 32); beatCtx.bezierCurveTo(50, -10, 25, -30, 0, -10); beatCtx.closePath();
+        const r = Math.floor(50 + (205 * beatIntensity)); beatCtx.fillStyle = `rgb(${r}, 0, 0)`; beatCtx.shadowBlur = 0; beatCtx.fill(); beatCtx.restore();
     }
 
     function loop(timestamp) {
@@ -227,38 +418,58 @@
         if (beatIntensity < 0) beatIntensity = 0;
         drawHeart();
 
-        // --- TUNABLE SERVO LOGIC ---
         const bufferMs = (queue.length / H10_RATE) * 1000;
         const error = bufferMs - TARGET_LATENCY;
-        
-        // Use the manual Gain and Target
         let targetRate = H10_RATE + (error * SERVO_GAIN); 
-        
-        if (targetRate < 80) targetRate = 80;
-        if (targetRate > 200) targetRate = 200;
-        
+        if (targetRate < 80) targetRate = 80; if (targetRate > 200) targetRate = 200;
         currentPlaybackRate = (currentPlaybackRate * 0.95) + (targetRate * 0.05);
 
         document.getElementById('actSpd').innerText = currentPlaybackRate.toFixed(1) + " Hz";
         document.getElementById('bufStat').innerText = bufferMs.toFixed(0) + " ms";
-        
         const barW = Math.min((bufferMs / 500) * 100, 100);
         document.getElementById('bufBar').style.width = barW + "%";
-        // Critical Red Zone reduced to 5ms since we target 50ms
         document.getElementById('bufBar').style.background = (barW < 2) ? 'red' : '#0f0';
 
         timeAccumulator += dt;
         const step = 1 / currentPlaybackRate;
+        
+        // --- SAFE ERASER LOGIC ---
+        let clearStart = Math.floor(screenCursor + 2);
+        let clearEnd = Math.floor(screenCursor + 15); 
+        for(let i=clearStart; i<=clearEnd; i++) {
+            let idx = i % canvas.width;
+            markerBuffer[idx] = 0; 
+        }
+
         while (timeAccumulator >= step) {
             timeAccumulator -= step;
             if (queue.length > 0) {
-                const val = queue.shift(); 
-                dcOffset = (dcOffset * 0.995) + (val * 0.005);
-                const centered = val - dcOffset;
+                const packet = queue.shift(); 
+                const val = packet.val;
+                
+                // ARTIFACT CLAMPING
+                let safeVal = val;
+                if(safeVal > MAX_ECG_VAL) safeVal = MAX_ECG_VAL;
+                if(safeVal < -MAX_ECG_VAL) safeVal = -MAX_ECG_VAL;
+
+                updateAGC(safeVal - dcOffset);
+                dcOffset = (dcOffset * 0.995) + (safeVal * 0.005);
+                const centered = safeVal - dcOffset;
                 const y = (canvas.height / 2) - (centered / gainDivisor);
-                screenBuffer[screenCursor] = y;
-                screenCursor++;
-                if (screenCursor >= canvas.width) screenCursor = 0;
+                
+                let startX = Math.floor(screenCursor);
+                screenCursor += pixelsPerSample;
+                if (screenCursor >= canvas.width) { screenCursor -= canvas.width; startX = 0; }
+                let endX = Math.floor(screenCursor);
+                
+                if (packet.isBeat && hrSource === 'ecg') triggerBeat(packet.bpm);
+
+                for (let x = startX; x <= endX; x++) {
+                    if(x < screenBuffer.length) {
+                        screenBuffer[x] = y;
+                        if (packet.isBeat) markerBuffer[x] = 1; 
+                    }
+                }
             }
         }
 
@@ -271,15 +482,24 @@
         let isDrawing = false;
         for (let i = 0; i < screenBuffer.length; i++) {
             const dist = Math.abs(i - screenCursor);
-            if (dist < 15) { isDrawing = false; continue; }
-            if (!isDrawing) { ctx.moveTo(i, screenBuffer[i]); isDrawing = true; } 
-            else { ctx.lineTo(i, screenBuffer[i]); }
+            if (dist < 15 || (i < 10 && screenCursor > canvas.width-10)) { isDrawing = false; continue; }
+            if (!isDrawing) { ctx.moveTo(i, screenBuffer[i]); isDrawing = true; } else { ctx.lineTo(i, screenBuffer[i]); }
         }
         ctx.stroke();
-
-        ctx.fillStyle = '#002200'; ctx.fillRect(screenCursor, 0, 2, canvas.height);
-        ctx.shadowBlur = 0;
-
+        
+        ctx.fillStyle = '#0f0';
+        for (let i = 0; i < markerBuffer.length; i++) {
+            if (markerBuffer[i] === 1) {
+                const dist = Math.abs(i - screenCursor);
+                if (dist > 15 && dist < canvas.width - 15) {
+                    ctx.beginPath();
+                    ctx.moveTo(i - 6, 20); ctx.lineTo(i + 6, 20); ctx.lineTo(i, 35); 
+                    ctx.fill();
+                }
+            }
+        }
+        
+        ctx.fillStyle = '#002200'; const barX = Math.floor(screenCursor); ctx.fillRect(barX, 0, 4, canvas.height);
         requestAnimationFrame(loop);
     }
     requestAnimationFrame(loop);
@@ -287,28 +507,27 @@
     document.getElementById('btnConnect').onclick = async () => {
         try {
             initAudio();
-            const device = await navigator.bluetooth.requestDevice({
-                filters: [{ namePrefix: "Polar H10" }],
-                optionalServices: [SVC_PMD, SVC_HR]
-            });
+            log("Connecting...");
+            const device = await navigator.bluetooth.requestDevice({ filters: [{ namePrefix: "Polar H10" }], optionalServices: [SVC_PMD, SVC_HR] });
             const server = await device.gatt.connect();
             document.getElementById('status').innerText = "ONLINE";
             document.getElementById('btnConnect').disabled = true;
+            log("Connected.");
 
             const hrSvc = await server.getPrimaryService(SVC_HR);
             const hrCh = await hrSvc.getCharacteristic(CHR_HR);
             await hrCh.startNotifications();
             hrCh.addEventListener('characteristicvaluechanged', e => {
-                document.getElementById('hrVal').innerText = e.target.value.getUint8(1);
-                beatIntensity = 1.0; 
-                playBeep();
+                const hr = e.target.value.getUint8(1);
+                lastBleBpm = hr;
+                if (hrSource === 'ble') triggerBeat(hr);
             });
 
             const pmdSvc = await server.getPrimaryService(SVC_PMD);
             const cpCh = await pmdSvc.getCharacteristic(CHR_CP);
             const dataCh = await pmdSvc.getCharacteristic(CHR_DATA);
-
             await cpCh.startNotifications();
+            log("Sending Start...");
             await cpCh.writeValue(new Uint8Array([0x02, 0x00, 0x00, 0x01, 0x82, 0x00, 0x01, 0x01, 0x0E, 0x00]));
             
             await dataCh.startNotifications();
@@ -323,14 +542,14 @@
                     let filtered = alpha * (prevFiltered + sample - prevRaw);
                     prevRaw = sample;
                     prevFiltered = filtered;
-                    queue.push(filtered);
+                    const qrsRes = checkQRS(filtered);
+                    queue.push({ val: filtered, isBeat: qrsRes.isBeat, bpm: qrsRes.bpm });
                 }
             });
-        } catch (e) {
-            console.error(e);
-            document.getElementById('btnConnect').disabled = false;
-        }
+            log("Stream Active.");
+        } catch (e) { log("Err: " + e.message); document.getElementById('btnConnect').disabled = false; }
     };
+    log("System ready. Click CONNECT H10 to start.");
 </script>
 </body>
 </html>
