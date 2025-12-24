@@ -301,11 +301,11 @@
     function updateAGC(sampleValue) {
         if (!isAutoGain) return;
         
-        // 1. INPUT CLAMP (FIRST LINE OF DEFENSE)
+        // INPUT CLAMP (FIRST LINE OF DEFENSE)
         // If sampleValue is wildly huge (artifact), ignore it for AGC purposes
         if (Math.abs(sampleValue) > MAX_ECG_VAL) return;
 
-        // 2. Normal Decay
+        // Normal Decay
         if (sampleValue > signalMax) signalMax = sampleValue;
         else signalMax -= (signalMax - sampleValue) * 0.005;
         
@@ -315,7 +315,7 @@
         let amplitude = signalMax - signalMin;
         if (amplitude < 100) amplitude = 100; 
 
-        // 3. SMART RECOVERY (The 10-second fix)
+        // SMART RECOVERY (The 10-second fix)
         // Check current calculated divisor vs ideal divisor
         let idealDivisor = amplitude / agcTargetHeight;
         if (idealDivisor < 0.1) idealDivisor = 0.1;
@@ -433,7 +433,7 @@
         timeAccumulator += dt;
         const step = 1 / currentPlaybackRate;
         
-        // --- SAFE ERASER LOGIC ---
+        // ERASER LOGIC
         let clearStart = Math.floor(screenCursor + 2);
         let clearEnd = Math.floor(screenCursor + 15); 
         for(let i=clearStart; i<=clearEnd; i++) {
