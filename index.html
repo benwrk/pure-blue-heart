@@ -103,7 +103,6 @@
                     <option value="ble">BLE SERVICE (REALTIME)</option>
                     <option value="ecg">ECG ANALYSIS (SYNCED)</option>
                 </select>
-                <div id="hrDebug" style="font-size: 0.6rem; color: #555; text-align: left; margin-top:2px;">Mode: Standard BLE</div>
             </div>
         </div>
         
@@ -254,7 +253,6 @@
     window.updateHrSource = () => {
         hrSource = document.getElementById('hrSourceSelect').value;
         const info = hrSource === 'ble' ? "Using Standard BLE Service (Fast)" : "Using ECG Analysis (Synced)";
-        document.getElementById('hrDebug').innerText = info;
     };
 
     function triggerBeat(bpm) {
