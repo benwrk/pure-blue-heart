@@ -109,10 +109,10 @@
             </div>
             <div style="margin-top: 10px; border-top: 1px dashed #030; padding-top: 5px;">
                 <div class="label" style="text-align: left;">HR SOURCE:</div>
-                <select id="hrSourceSelect" onchange="updateHrSource()">
-                    <option value="ble">BLE SERVICE (REALTIME)</option>
-                    <option value="ecg">ECG ANALYSIS (SYNCED)</option>
-                </select>
+                <div class="mode-select">
+                    <button id="hrModeBle" class="mode-btn active" onclick="setHrSource('ble')">BLE (REALTIME)</button>
+                    <button id="hrModeEcg" class="mode-btn" onclick="setHrSource('ecg')">ECG (SYNCED)</button>
+                </div>
             </div>
         </div>
         
@@ -261,9 +261,11 @@
     };
     adjSweep(0);
 
-    window.updateHrSource = () => {
-        hrSource = document.getElementById('hrSourceSelect').value;
-        const info = hrSource === 'ble' ? "Using Standard BLE Service (Fast)" : "Using ECG Analysis (Synced)";
+    window.setHrSource = (source) => {
+        hrSource = source;
+        document.getElementById('hrModeBle').classList.toggle('active', source === 'ble');
+        document.getElementById('hrModeEcg').classList.toggle('active', source === 'ecg');
+        log("HR Source switched to " + source.toUpperCase());
     };
 
     function triggerBeat(bpm) {
