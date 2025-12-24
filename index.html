@@ -134,9 +134,13 @@
         white-space: nowrap;
       }
       /* STATUS COLORS */
-      .status-val-dis { color: #ff5555; }
-      .status-val-con { color: #0f0; }
-      
+      .status-val-dis {
+        color: #ff5555;
+      }
+      .status-val-con {
+        color: #0f0;
+      }
+
       .status-sep {
         color: #040;
         font-weight: bold;
@@ -400,7 +404,7 @@
           by benwrk
         </div>
       </div>
-      <button id="btnConnect" style="padding: 8px 16px">CONNECT H10</button>
+      <button id="btnConnect" style="padding: 8px 16px">CONNECT POLAR H10</button>
     </header>
 
     <div id="container">
@@ -447,7 +451,7 @@
               padding-top: 5px;
             "
           >
-            <div class="label" style="text-align: left">HR SOURCE:</div>
+            <div class="label" style="text-align: left">HR SOURCE</div>
             <div class="mode-select">
               <button
                 id="hrModeBle"
@@ -469,7 +473,7 @@
 
         <div class="panel">
           <div class="label main-label" onclick="togglePanel(this)">
-            HRV DATA DETAILS
+            HRV DATA
           </div>
 
           <div class="hrv-header">TIME DOMAIN</div>
@@ -554,13 +558,19 @@
             </div>
           </div>
 
-          <div class="label" style="margin-top: 10px; font-size: 0.6rem">
-            ANALYSIS WINDOW
-          </div>
-          <div class="control-row">
-            <button onclick="adjHrvWindow(-30)">-30s</button>
-            <span id="hrvWinVal" class="control-val">5.0m</span>
-            <button onclick="adjHrvWindow(30)">+30s</button>
+          <div
+            style="
+              margin-top: 5px;
+              border-top: 1px dashed #030;
+              padding-top: 5px;
+            "
+          >
+            <div class="label" style="text-align: left">ANALYSIS WINDOW</div>
+            <div class="control-row">
+              <button onclick="adjHrvWindow(-30)">-30s</button>
+              <span id="hrvWinVal" class="control-val">5.0m</span>
+              <button onclick="adjHrvWindow(30)">+30s</button>
+            </div>
           </div>
 
           <div
@@ -570,7 +580,7 @@
               padding-top: 5px;
             "
           >
-            <div class="label" style="text-align: left">HRV RR SOURCE:</div>
+            <div class="label" style="text-align: left">HRV RR SOURCE</div>
             <div class="mode-select">
               <button
                 id="hrvModeBle"
@@ -592,15 +602,12 @@
 
         <div class="panel collapsed">
           <div class="label main-label" onclick="togglePanel(this)">
-            SWEEP SPEED (MM/S)
+            SWEEP SPEED
           </div>
           <div class="control-row">
             <button onclick="adjSweep(-2.5)">-2.5</button>
             <span id="sweepVal" class="control-val">25.0</span>
             <button onclick="adjSweep(2.5)">+2.5</button>
-          </div>
-          <div style="font-size: 0.6rem; color: #666; margin-top: 2px">
-            (Min: 12.5 | Max: 50.0)
           </div>
         </div>
 
@@ -698,7 +705,7 @@
         STATUS: <span id="statusVal" class="status-val-dis">DISCONNECTED</span>
       </div>
       <div class="status-item status-sep">|</div>
-      
+
       <div class="status-item">
         ECG PLAYBACK RATE: <span id="actSpd" style="color: yellow">-- Hz</span>
       </div>
@@ -1400,12 +1407,12 @@
             optionalServices: [SVC_PMD, SVC_HR],
           });
           const server = await device.gatt.connect();
-          
+
           // --- UPDATED STATUS COLOR LOGIC ---
           const st = document.getElementById("statusVal");
           st.innerText = "CONNECTED";
           st.className = "status-val-con"; // Green
-          
+
           document.getElementById("btnConnect").disabled = true;
           log("Connected.");
 
@@ -1480,7 +1487,7 @@
           document.getElementById("btnConnect").disabled = false;
         }
       };
-      log("System ready. Click CONNECT H10 to start.");
+      log("System ready. Click CONNECT POLAR H10 to start.");
       function dismissConsent() {
         document.getElementById("analytics-consent").style.display = "none";
       }
@@ -1500,6 +1507,7 @@
         border: 2px solid #0f0;
         border-radius: 5px;
         z-index: 100;
+        font-size: 0.75rem;
       "
     >
       THIS SITE USES GOOGLE ANALYTICS TO COLLECT STATISTICS.
@@ -1514,7 +1522,7 @@
           cursor: pointer;
         "
       >
-        DISMISS
+        &times;
       </button>
     </div>
   </body>
