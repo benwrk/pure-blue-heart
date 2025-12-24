@@ -549,5 +549,25 @@
     };
     log("System ready. Click CONNECT H10 to start.");
 </script>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-Y6X2E5KDQ0"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-Y6X2E5KDQ0');
+</script>
+
+<div id="analytics-consent" style="position: fixed; bottom: 10px; left: 50%; transform: translateX(-50%); background: #001100; color: #0f0; padding: 10px 20px; text-align: center; border: 2px solid #0f0; border-radius: 5px; z-index: 100;">
+    This site uses Google Analytics to improve user experience. By using this site, you consent to the use of cookies. 
+    <button onclick="dismissConsent()" style="margin-left: 10px; background: #0f0; color: #000; border: none; padding: 5px 10px; cursor: pointer;">Dismiss</button>
+</div>
+<script>
+    function dismissConsent() {
+        document.getElementById('analytics-consent').style.display = 'none';
+    }
+</script>
+
 </body>
 </html>
