@@ -1,351 +1,1075 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Pure Blue Heart</title>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Pure Blue Heart by benwrk</title>
     <style>
-        body { background-color: #000; color: #0f0; font-family: 'Consolas', monospace; margin: 0; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
-        header { background: #051005; padding: 10px 20px; border-bottom: 2px solid #0f0; display: flex; justify-content: space-between; align-items: center; z-index: 10; }
-        
-        button, select { background: #003300; color: #0f0; border: 1px solid #0f0; padding: 5px 10px; cursor: pointer; font-weight: bold; font-family: inherit; transition: 0.2s; font-size: 0.8rem; }
-        button:hover, select:hover { background: #0f0; color: #000; box-shadow: 0 0 10px #0f0; }
-        button:disabled { background: #222; color: #555; border-color: #444; box-shadow: none; cursor: not-allowed; opacity: 0.5; }
-        select { width: 100%; margin-top: 5px; text-align: center; }
-        
-        #container { flex: 1; display: flex; position: relative; }
-        
-        #chart-area { 
-            flex: 1; 
-            position: relative; 
-            background: linear-gradient(rgba(0, 50, 0, 0.2) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 50, 0, 0.2) 1px, transparent 1px); 
-            background-size: 50px 50px; 
-        }
-        canvas { display: block; width: 100%; height: 100%; }
+      /* LAYOUT CORE */
+      body {
+        background-color: #000;
+        color: #0f0;
+        font-family: "Consolas", monospace;
+        margin: 0;
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
 
-        /* LOG OVERLAY */
-        #log-overlay {
-            position: absolute; bottom: 0; right: 0;
-            width: 400px; height: 200px;
-            background: rgba(0, 10, 0, 0.95);
-            border-top: 2px solid #0f0; border-left: 2px solid #0f0;
-            padding: 10px;
-            font-size: 0.7rem; color: #0c0;
-            overflow-y: auto; font-family: monospace;
-            z-index: 20; display: none;
-            box-shadow: -5px -5px 15px rgba(0, 50, 0, 0.5);
-        }
-        #log-toggle-btn { position: absolute; bottom: 10px; right: 10px; z-index: 21; opacity: 0.7; }
-        #log-toggle-btn:hover { opacity: 1; }
-        
-        #sidebar { width: 320px; background: #020502; border-left: 2px solid #0f0; padding: 15px; display: flex; flex-direction: column; gap: 15px; z-index: 10; overflow-y: auto; }
-        .panel { border: 1px solid #0a0; padding: 10px; text-align: center; background: #001100; }
-        
-        /* TRUE CENTER HR */
-        .bpm-row { 
-            position: relative; display: flex; justify-content: center; align-items: center; 
-            height: 80px; margin: 5px 0; 
-        }
-        .val-big { font-size: 4rem; font-weight: bold; text-shadow: 0 0 10px #0f0; line-height: 1; z-index: 1; }
-        #beatCanvas { 
-            position: absolute; left: calc(50% + 60px); top: 50%; transform: translateY(-50%);
-            width: 35px; height: 35px; display: block; 
-        }
+      /* HEADER (TOP) */
+      header {
+        background: #051005;
+        padding: 0 20px;
+        height: 50px;
+        border-bottom: 2px solid #0f0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        z-index: 10;
+        flex-shrink: 0;
+      }
 
-        .label { font-size: 0.7rem; color: #0a0; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 1px; }
-        .stat-row { display: flex; justify-content: space-between; font-size: 0.75rem; color: #8f8; margin-top: 3px; border-bottom: 1px solid #030; padding-bottom: 2px; }
-        .control-row { display: flex; justify-content: space-between; gap: 5px; align-items: center; margin-top: 5px; background: #002200; padding: 5px; border-radius: 4px; }
-        .control-val { font-weight: bold; color: #fff; min-width: 50px; text-align: right; }
-        
-        .toggle-btn { width: 100%; padding: 5px; font-size: 0.8rem; margin-top: 5px; }
-        .toggle-on { background: #0f0; color: #000; }
-        .toggle-off { background: #300; color: #888; border-color: #500; }
+      button,
+      select {
+        background: #003300;
+        color: #0f0;
+        border: 1px solid #0f0;
+        padding: 5px 10px;
+        cursor: pointer;
+        font-weight: bold;
+        font-family: inherit;
+        transition: 0.2s;
+        font-size: 0.8rem;
+      }
+      button:hover,
+      select:hover {
+        background: #0f0;
+        color: #000;
+        box-shadow: 0 0 10px #0f0;
+      }
+      button:disabled {
+        background: #222;
+        color: #555;
+        border-color: #444;
+        box-shadow: none;
+        cursor: not-allowed;
+        opacity: 0.5;
+      }
+      select {
+        width: 100%;
+        margin-top: 5px;
+        text-align: center;
+      }
 
-        .mode-select { display: flex; gap: 5px; margin-bottom: 5px; }
-        .mode-btn { flex: 1; font-size: 0.7rem; padding: 3px; border: 1px solid #060; color: #080; background: #020; }
-        .mode-btn.active { background: #0f0; color: #000; border-color: #0f0; font-weight: bold; }
+      /* MAIN CONTAINER (MIDDLE) */
+      #container {
+        flex: 1;
+        display: flex;
+        position: relative;
+        overflow: hidden;
+        min-height: 0;
+      }
 
-        .log-entry { margin-bottom: 4px; border-bottom: 1px dotted #030; padding-bottom: 2px; }
-        .log-time { color: #080; margin-right: 5px; }
-        .log-data { color: #cfc; display: block; margin-left: 15px; white-space: pre-wrap; }
+      #chart-area {
+        flex: 1;
+        position: relative;
+        background: linear-gradient(rgba(0, 50, 0, 0.2) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(0, 50, 0, 0.2) 1px, transparent 1px);
+        background-size: 50px 50px;
+      }
+      canvas {
+        display: block;
+        width: 100%;
+        height: 100%;
+      }
+
+      /* SIDEBAR (RIGHT) */
+      #sidebar {
+        width: 340px;
+        background: #020502;
+        border-left: 2px solid #0f0;
+        padding: 10px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        z-index: 10;
+        overflow-y: auto;
+        scrollbar-width: thin;
+        scrollbar-color: #0f0 #001100;
+      }
+      #sidebar::-webkit-scrollbar {
+        width: 10px;
+      }
+      #sidebar::-webkit-scrollbar-track {
+        background: #001100;
+        border-left: 1px solid #030;
+      }
+      #sidebar::-webkit-scrollbar-thumb {
+        background: #0f0;
+        border: 2px solid #001100;
+        border-radius: 5px;
+      }
+      #sidebar::-webkit-scrollbar-thumb:hover {
+        background: #fff;
+      }
+
+      /* FOOTER (BOTTOM STATUS BAR) */
+      #status-bar {
+        height: 30px;
+        background: #001100;
+        border-top: 2px solid #0f0;
+        display: flex;
+        align-items: center;
+        padding: 0 20px;
+        gap: 15px;
+        font-size: 0.75rem;
+        color: #8f8;
+        flex-shrink: 0;
+        z-index: 20;
+      }
+      .status-item {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        white-space: nowrap;
+      }
+      /* STATUS COLORS */
+      .status-val-dis { color: #ff5555; }
+      .status-val-con { color: #0f0; }
+      
+      .status-sep {
+        color: #040;
+        font-weight: bold;
+      }
+      .buffer-track {
+        flex: 1;
+        height: 8px;
+        background: #003300;
+        border: 1px solid #050;
+        position: relative;
+        max-width: 150px;
+      }
+      .buffer-fill {
+        height: 100%;
+        background: #0f0;
+        width: 0%;
+        transition: width 0.1s;
+      }
+
+      /* LOG OVERLAY */
+      #log-overlay {
+        position: absolute;
+        bottom: 0;
+        right: 0;
+        width: 400px;
+        height: 200px;
+        background: rgba(0, 10, 0, 0.95);
+        border-top: 2px solid #0f0;
+        border-left: 2px solid #0f0;
+        padding: 10px;
+        font-size: 0.7rem;
+        color: #0c0;
+        overflow-y: auto;
+        font-family: monospace;
+        z-index: 20;
+        display: none;
+        box-shadow: -5px -5px 15px rgba(0, 50, 0, 0.5);
+      }
+      #log-toggle-btn {
+        position: absolute;
+        bottom: 10px;
+        right: 10px;
+        z-index: 21;
+        opacity: 0.7;
+      }
+
+      /* PANELS */
+      .panel {
+        border: 1px solid #0a0;
+        padding: 8px;
+        text-align: center;
+        background: #001100;
+        transition: all 0.2s;
+        flex-shrink: 0;
+      }
+      .panel.collapsed > *:not(.main-label) {
+        display: none !important;
+      }
+      .panel.collapsed {
+        padding-bottom: 4px;
+        border-color: #040;
+      }
+
+      .label {
+        font-size: 0.65rem;
+        color: #0a0;
+        margin-bottom: 3px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+      }
+      .main-label {
+        cursor: pointer;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        user-select: none;
+        font-weight: bold;
+      }
+      .main-label::after {
+        content: "▼";
+        font-size: 0.8em;
+        transition: 0.2s;
+        opacity: 0.7;
+      }
+      .panel.collapsed .main-label::after {
+        transform: rotate(-90deg);
+        opacity: 0.4;
+      }
+      .panel.collapsed .main-label {
+        margin-bottom: 0;
+        color: #080;
+      }
+
+      /* CONTROLS */
+      .control-row {
+        display: flex;
+        justify-content: space-between;
+        gap: 5px;
+        align-items: center;
+        margin-top: 5px;
+        background: #002200;
+        padding: 5px;
+        border-radius: 4px;
+      }
+      .control-val {
+        font-weight: bold;
+        color: #fff;
+        min-width: 40px;
+        text-align: right;
+        font-size: 0.8rem;
+      }
+
+      .toggle-btn {
+        width: 100%;
+        padding: 5px;
+        font-size: 0.8rem;
+        margin-top: 5px;
+      }
+      .toggle-on {
+        background: #0f0;
+        color: #000;
+      }
+      .toggle-off {
+        background: #300;
+        color: #888;
+        border-color: #500;
+      }
+
+      .mode-select {
+        display: flex;
+        gap: 5px;
+        margin-bottom: 5px;
+      }
+      .mode-btn {
+        flex: 1;
+        font-size: 0.65rem;
+        padding: 3px;
+        border: 1px solid #060;
+        color: #080;
+        background: #020;
+      }
+      .mode-btn.active {
+        background: #0f0;
+        color: #000;
+        border-color: #0f0;
+        font-weight: bold;
+      }
+
+      .log-entry {
+        margin-bottom: 4px;
+        border-bottom: 1px dotted #030;
+        padding-bottom: 2px;
+      }
+      .log-time {
+        color: #080;
+        margin-right: 5px;
+      }
+      .log-data {
+        color: #cfc;
+        display: block;
+        margin-left: 15px;
+        white-space: pre-wrap;
+      }
+
+      /* TRUE CENTER HR */
+      .bpm-row {
+        position: relative;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 70px;
+        margin: 5px 0;
+      }
+      .val-big {
+        font-size: 4rem;
+        font-weight: bold;
+        color: #0f0;
+        line-height: 1;
+        z-index: 1;
+      }
+      #beatCanvas {
+        position: absolute;
+        left: calc(50% + 60px);
+        top: 50%;
+        transform: translateY(-50%);
+        width: 35px;
+        height: 35px;
+        display: block;
+      }
+
+      /* HRV GRID (UNIFIED NEON THEME) */
+      .hrv-header {
+        text-align: left;
+        font-size: 0.75rem;
+        color: #0a0;
+        font-weight: bold;
+        margin-top: 10px;
+        margin-bottom: 5px;
+        border-bottom: 1px solid #060; /* Solid line */
+        padding-bottom: 2px;
+      }
+      .hrv-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+      }
+      .hrv-card {
+        background: #001500;
+        padding: 8px;
+        border-radius: 4px;
+        text-align: left;
+        border: 1px solid #060;
+      }
+      .hrv-card-val {
+        font-size: 1.2rem;
+        font-weight: bold;
+        color: #0f0; /* NEON GREEN VALUE */
+      }
+      .hrv-card-unit {
+        font-size: 0.7rem;
+        color: #8a8;
+        margin-left: 2px;
+      }
+      .hrv-card-lbl {
+        font-size: 0.6rem;
+        color: #0a0;
+        text-transform: uppercase;
+        margin-top: 2px;
+        display: block;
+      }
+      .hrv-full {
+        grid-column: span 2;
+      }
     </style>
-</head>
-<body>
+  </head>
+  <body>
+    <script
+      async
+      src="https://www.googletagmanager.com/gtag/js?id=G-Y6X2E5KDQ0"
+    ></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag() {
+        dataLayer.push(arguments);
+      }
+      gtag("js", new Date());
+      gtag("config", "G-Y6X2E5KDQ0");
+    </script>
 
-    <!-- Google tag (gtag.js) -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-Y6X2E5KDQ0"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
+    <header>
+      <div>
+        💙 PURE BLUE HEART
+        <div
+          style="
+            display: inline;
+            font-size: 0.8rem;
+            color: #444;
+            margin-left: 10px;
+          "
+        >
+          by benwrk
+        </div>
+      </div>
+      <button id="btnConnect" style="padding: 8px 16px">CONNECT H10</button>
+    </header>
 
-  gtag('config', 'G-Y6X2E5KDQ0');
-</script>
-
-<header>
-    <div>🛜 Pure Blue Heart</div>
-    <div id="status">DISCONNECTED</div>
-    <button id="btnConnect" style="padding: 8px 16px;">CONNECT H10</button>
-</header>
-
-<div id="container">
-    <div id="chart-area">
+    <div id="container">
+      <div id="chart-area">
         <canvas id="ecgCanvas"></canvas>
         <button id="log-toggle-btn" onclick="toggleLog()">SHOW LOG</button>
         <div id="log-overlay">
-            <div style="position: sticky; top:0; background:#010; padding:5px; border-bottom:1px solid #0f0; display:flex; justify-content:space-between;">
-                <span>SYSTEM LOG</span>
-                <button onclick="clearLog()" style="padding:2px 5px; font-size:0.6rem;">CLEAR</button>
-            </div>
-            <div id="log-content"></div>
+          <div
+            style="
+              position: sticky;
+              top: 0;
+              background: #010;
+              padding: 5px;
+              border-bottom: 1px solid #0f0;
+              display: flex;
+              justify-content: space-between;
+            "
+          >
+            <span>SYSTEM LOG</span>
+            <button
+              onclick="clearLog()"
+              style="padding: 2px 5px; font-size: 0.6rem"
+            >
+              CLEAR
+            </button>
+          </div>
+          <div id="log-content"></div>
         </div>
-    </div>
-    
-    <div id="sidebar">
-        <div class="panel">
-            <div class="label">HEART RATE</div>
-            <div class="bpm-row">
-                <div id="hrVal" class="val-big">--</div>
-                <canvas id="beatCanvas" width="70" height="70"></canvas>
-            </div>
-            <div style="margin-top: 10px; border-top: 1px dashed #030; padding-top: 5px;">
-                <div class="label" style="text-align: left;">HR SOURCE:</div>
-                <div class="mode-select">
-                    <button id="hrModeBle" class="mode-btn active" onclick="setHrSource('ble')">BLE (REALTIME)</button>
-                    <button id="hrModeEcg" class="mode-btn" onclick="setHrSource('ecg')">ECG (SYNCED)</button>
-                </div>
-            </div>
-        </div>
-        
-        <div class="panel">
-            <div class="label">SWEEP SPEED (MM/S)</div>
-            <div class="control-row">
-                <button onclick="adjSweep(-2.5)">-2.5</button>
-                <span id="sweepVal" class="control-val">25.0</span>
-                <button onclick="adjSweep(2.5)">+2.5</button>
-            </div>
-            <div style="font-size: 0.6rem; color: #666; margin-top:2px;">(Min: 12.5 | Max: 50.0)</div>
-        </div>
+      </div>
 
+      <div id="sidebar">
         <div class="panel">
-            <div class="label">GAIN CONTROL</div>
+          <div class="label main-label" onclick="togglePanel(this)">
+            HEART RATE
+          </div>
+          <div class="bpm-row">
+            <div id="hrVal" class="val-big">--</div>
+            <canvas id="beatCanvas" width="70" height="70"></canvas>
+          </div>
+          <div
+            style="
+              margin-top: 10px;
+              border-top: 1px dashed #030;
+              padding-top: 5px;
+            "
+          >
+            <div class="label" style="text-align: left">HR SOURCE:</div>
             <div class="mode-select">
-                <button id="modeManual" class="mode-btn active" onclick="setGainMode(false)">MANUAL</button>
-                <button id="modeAuto" class="mode-btn" onclick="setGainMode(true)">AUTO</button>
+              <button
+                id="hrModeBle"
+                class="mode-btn active"
+                onclick="setHrSource('ble')"
+              >
+                BLE (POLAR)
+              </button>
+              <button
+                id="hrModeEcg"
+                class="mode-btn"
+                onclick="setHrSource('ecg')"
+              >
+                ECG (QRS DETECT)
+              </button>
             </div>
-            <div id="manualControls">
-                <div class="control-row">
-                    <button onclick="adjGain(-1)">OUT</button>
-                    <span id="gainVal" class="control-val">20.0x</span> 
-                    <button onclick="adjGain(1)">IN</button>
-                </div>
-            </div>
-            <div id="autoControls" style="display:none;">
-                <div class="label" style="margin-top:5px; font-size:0.6rem;">AUTO TARGET HEIGHT</div>
-                <div class="control-row">
-                    <button onclick="adjAgcTarget(-10)">-10px</button>
-                    <span id="agcTargetVal" class="control-val">150px</span>
-                    <button onclick="adjAgcTarget(10)">+10px</button>
-                </div>
-                <div id="agcCurrentGain" style="font-size: 0.6rem; color: #8f8; margin-top: 3px; text-align:right;">CURRENT: --x</div>
-            </div>
+          </div>
         </div>
 
         <div class="panel">
-            <div class="label">AUDIO SETTINGS</div>
-            <button id="btnSound" class="toggle-btn toggle-on" onclick="toggleSound()">SOUND: ON</button>
-            <select id="soundType">
-                <option value="simple">TYPE: SIMPLE BEEP</option>
-                <option value="medical">TYPE: MEDICAL</option>
-                <option value="thud">TYPE: THUD</option>
-                <option value="8bit">TYPE: 8-BIT</option>
-            </select>
+          <div class="label main-label" onclick="togglePanel(this)">
+            HRV DATA DETAILS
+          </div>
+
+          <div class="hrv-header">TIME DOMAIN</div>
+          <div class="hrv-grid">
+            <div class="hrv-card">
+              <div>
+                <span id="v_rmssd" class="hrv-card-val">--</span
+                ><span class="hrv-card-unit">MS</span>
+              </div>
+              <span class="hrv-card-lbl">RMSSD</span>
+            </div>
+            <div class="hrv-card">
+              <div>
+                <span id="v_sdnn" class="hrv-card-val">--</span
+                ><span class="hrv-card-unit">MS</span>
+              </div>
+              <span class="hrv-card-lbl">SDNN</span>
+            </div>
+            <div class="hrv-card">
+              <div>
+                <span id="v_lnrmssd" class="hrv-card-val">--</span
+                ><span class="hrv-card-unit">MS</span>
+              </div>
+              <span class="hrv-card-lbl">LN (RMSSD)</span>
+            </div>
+            <div class="hrv-card">
+              <div>
+                <span id="v_pnn50" class="hrv-card-val">--</span
+                ><span class="hrv-card-unit">%</span>
+              </div>
+              <span class="hrv-card-lbl">PNN50</span>
+            </div>
+            <div class="hrv-card hrv-full">
+              <div>
+                <span id="v_meanrr" class="hrv-card-val">--</span
+                ><span class="hrv-card-unit">MS</span>
+              </div>
+              <span class="hrv-card-lbl">MEAN RR INTERVAL</span>
+            </div>
+          </div>
+
+          <div class="hrv-header">FREQUENCY DOMAIN</div>
+          <div class="hrv-grid">
+            <div class="hrv-card">
+              <div>
+                <span id="v_tp" class="hrv-card-val">--</span
+                ><span class="hrv-card-unit">MS²</span>
+              </div>
+              <span class="hrv-card-lbl">TOTAL POWER</span>
+            </div>
+            <div class="hrv-card">
+              <div><span id="v_ratio" class="hrv-card-val">--</span></div>
+              <span class="hrv-card-lbl">LF/HF RATIO</span>
+            </div>
+            <div class="hrv-card">
+              <div>
+                <span id="v_lf" class="hrv-card-val">--</span
+                ><span class="hrv-card-unit">MS²</span>
+              </div>
+              <span class="hrv-card-lbl">LF POWER</span>
+            </div>
+            <div class="hrv-card">
+              <div>
+                <span id="v_hf" class="hrv-card-val">--</span
+                ><span class="hrv-card-unit">MS²</span>
+              </div>
+              <span class="hrv-card-lbl">HF POWER</span>
+            </div>
+            <div class="hrv-card">
+              <div>
+                <span id="v_lfp" class="hrv-card-val">--</span
+                ><span class="hrv-card-unit">HZ</span>
+              </div>
+              <span class="hrv-card-lbl">LF PEAK</span>
+            </div>
+            <div class="hrv-card">
+              <div>
+                <span id="v_hfp" class="hrv-card-val">--</span
+                ><span class="hrv-card-unit">HZ</span>
+              </div>
+              <span class="hrv-card-lbl">HF PEAK</span>
+            </div>
+          </div>
+
+          <div class="label" style="margin-top: 10px; font-size: 0.6rem">
+            ANALYSIS WINDOW
+          </div>
+          <div class="control-row">
+            <button onclick="adjHrvWindow(-30)">-30s</button>
+            <span id="hrvWinVal" class="control-val">5.0m</span>
+            <button onclick="adjHrvWindow(30)">+30s</button>
+          </div>
+
+          <div
+            style="
+              margin-top: 5px;
+              border-top: 1px dashed #030;
+              padding-top: 5px;
+            "
+          >
+            <div class="label" style="text-align: left">HRV RR SOURCE:</div>
+            <div class="mode-select">
+              <button
+                id="hrvModeBle"
+                class="mode-btn active"
+                onclick="setHrvSource('ble')"
+              >
+                BLE (POLAR)
+              </button>
+              <button
+                id="hrvModeEcg"
+                class="mode-btn"
+                onclick="setHrvSource('ecg')"
+              >
+                ECG (QRS DETECT)
+              </button>
+            </div>
+          </div>
         </div>
 
-        <div class="panel">
-            <div class="label">TUNING: TARGET LATENCY</div>
+        <div class="panel collapsed">
+          <div class="label main-label" onclick="togglePanel(this)">
+            SWEEP SPEED (MM/S)
+          </div>
+          <div class="control-row">
+            <button onclick="adjSweep(-2.5)">-2.5</button>
+            <span id="sweepVal" class="control-val">25.0</span>
+            <button onclick="adjSweep(2.5)">+2.5</button>
+          </div>
+          <div style="font-size: 0.6rem; color: #666; margin-top: 2px">
+            (Min: 12.5 | Max: 50.0)
+          </div>
+        </div>
+
+        <div class="panel collapsed">
+          <div class="label main-label" onclick="togglePanel(this)">
+            GAIN CONTROL
+          </div>
+          <div class="mode-select">
+            <button
+              id="modeManual"
+              class="mode-btn active"
+              onclick="setGainMode(false)"
+            >
+              MANUAL
+            </button>
+            <button id="modeAuto" class="mode-btn" onclick="setGainMode(true)">
+              AUTO
+            </button>
+          </div>
+          <div id="manualControls">
             <div class="control-row">
-                <button onclick="adjTarget(-10)">-10ms</button>
-                <span id="dispTarget" class="control-val">50 ms</span>
-                <button onclick="adjTarget(10)">+10ms</button>
+              <button onclick="adjGain(-1)">OUT</button>
+              <span id="gainVal" class="control-val">20.0x</span>
+              <button onclick="adjGain(1)">IN</button>
             </div>
-        </div>
-
-        <div class="panel">
-            <div class="label">TUNING: SERVO FORCE</div>
+          </div>
+          <div id="autoControls" style="display: none">
+            <div class="label" style="margin-top: 5px; font-size: 0.6rem">
+              AUTO TARGET HEIGHT
+            </div>
             <div class="control-row">
-                <button onclick="adjForce(-0.005)">-0.005</button>
-                <span id="dispForce" class="control-val">0.010</span>
-                <button onclick="adjForce(0.005)">+0.005</button>
+              <button onclick="adjAgcTarget(-10)">-10px</button>
+              <span id="agcTargetVal" class="control-val">150px</span>
+              <button onclick="adjAgcTarget(10)">+10px</button>
             </div>
+            <div
+              id="agcCurrentGain"
+              style="
+                font-size: 0.6rem;
+                color: #8f8;
+                margin-top: 3px;
+                text-align: right;
+              "
+            >
+              CURRENT: --x
+            </div>
+          </div>
         </div>
 
-        <div class="panel">
-            <div class="label">SYSTEM STATUS</div>
-            <div class="stat-row"><span>PLAYBACK:</span> <span id="actSpd" style="color:yellow">-- Hz</span></div>
-            <div class="stat-row"><span>BUFFER:</span> <span id="bufStat">0 ms</span></div>
-            <div style="width: 100%; height: 6px; background: #333; margin-top: 5px;">
-                <div id="bufBar" style="width: 50%; height: 100%; background: #0f0; transition: width 0.1s;"></div>
-            </div>
+        <div class="panel collapsed">
+          <div class="label main-label" onclick="togglePanel(this)">
+            BEEP SETTINGS
+          </div>
+          <button
+            id="btnSound"
+            class="toggle-btn toggle-on"
+            onclick="toggleSound()"
+          >
+            BEEP: ON
+          </button>
+          <select id="soundType">
+            <option value="simple">TYPE: SIMPLE BEEP</option>
+            <option value="medical">TYPE: MEDICAL</option>
+            <option value="thud">TYPE: THUD</option>
+            <option value="8bit">TYPE: 8-BIT</option>
+          </select>
         </div>
+
+        <div class="panel collapsed">
+          <div class="label main-label" onclick="togglePanel(this)">
+            ECG TUNING: TARGET LATENCY
+          </div>
+          <div class="control-row">
+            <button onclick="adjTarget(-10)">-10ms</button>
+            <span id="dispTarget" class="control-val">50 ms</span>
+            <button onclick="adjTarget(10)">+10ms</button>
+          </div>
+        </div>
+
+        <div class="panel collapsed">
+          <div class="label main-label" onclick="togglePanel(this)">
+            ECG TUNING: SERVO FORCE
+          </div>
+          <div class="control-row">
+            <button onclick="adjForce(-0.005)">-0.005</button>
+            <span id="dispForce" class="control-val">0.010</span>
+            <button onclick="adjForce(0.005)">+0.005</button>
+          </div>
+        </div>
+      </div>
     </div>
-</div>
 
-<script>
-    const SVC_PMD = "fb005c80-02e7-f387-1cad-8acd2d8df0c8";
-    const CHR_CP  = "fb005c81-02e7-f387-1cad-8acd2d8df0c8";
-    const CHR_DATA= "fb005c82-02e7-f387-1cad-8acd2d8df0c8";
-    const SVC_HR  = "0000180d-0000-1000-8000-00805f9b34fb";
-    const CHR_HR  = "00002a37-0000-1000-8000-00805f9b34fb";
+    <footer id="status-bar">
+      <div class="status-item">
+        STATUS: <span id="statusVal" class="status-val-dis">DISCONNECTED</span>
+      </div>
+      <div class="status-item status-sep">|</div>
+      
+      <div class="status-item">
+        ECG PLAYBACK RATE: <span id="actSpd" style="color: yellow">-- Hz</span>
+      </div>
+      <div class="buffer-track">
+        <div id="bufBar" class="buffer-fill"></div>
+      </div>
+      <div class="status-item">ECG BUFFER: <span id="bufStat">0 ms</span></div>
+      <div style="flex: 1"></div>
+      <div style="font-size: 0.6rem; color: #444">
+        Pure Blue Heart | &copy; benwrk | made with &hearts; in Bangkok
+      </div>
+    </footer>
 
-    const canvas = document.getElementById('ecgCanvas');
-    const ctx = canvas.getContext('2d');
-    const beatCanvas = document.getElementById('beatCanvas');
-    const beatCtx = beatCanvas.getContext('2d');
+    <script>
+      const SVC_PMD = "fb005c80-02e7-f387-1cad-8acd2d8df0c8";
+      const CHR_CP = "fb005c81-02e7-f387-1cad-8acd2d8df0c8";
+      const CHR_DATA = "fb005c82-02e7-f387-1cad-8acd2d8df0c8";
+      const SVC_HR = "0000180d-0000-1000-8000-00805f9b34fb";
+      const CHR_HR = "00002a37-0000-1000-8000-00805f9b34fb";
 
-    // QUEUE
-    let queue = [];
-    const H10_RATE = 130;       
-    let screenBuffer = []; 
-    let markerBuffer = []; 
-    
-    let screenCursor = 0.0;
-    let lastFrameTime = 0;
-    let timeAccumulator = 0;
-    let currentPlaybackRate = H10_RATE; 
-    let prevRaw = 0, prevFiltered = 0;
-    let dcOffset = 0;
-    
-    // GAIN & AGC
-    let gainMult = 20.0;    
-    let gainDivisor = 300 / gainMult; 
-    let isAutoGain = false; 
-    let signalMin = 0, signalMax = 0, agcTargetHeight = 150; 
-    const MAX_ECG_VAL = 3000; // Clamp artifact > 3mV
+      const canvas = document.getElementById("ecgCanvas");
+      const ctx = canvas.getContext("2d");
+      const beatCanvas = document.getElementById("beatCanvas");
+      const beatCtx = beatCanvas.getContext("2d");
 
-    // SWEEP
-    let sweepSpeedMm = 25.0; 
-    let pixelsPerSample = 0.73;
+      // QUEUE
+      let queue = [];
+      const H10_RATE = 130;
+      let screenBuffer = [];
+      let markerBuffer = [];
 
-    // HR
-    let hrSource = 'ble'; 
-    let lastBleBpm = 0;
-    let rrIntervals = [];
-    let nextBeatTime = 0; // Added for BLE beat simulation
-    
-    // QRS
-    let qrsThreshold = 50000; 
-    let qrsLastSample = 0;
-    let integralBuf = [];
-    const INTEGRAL_WIN_SIZE = 5; 
-    const QRS_REFRACTORY_SAMPLES = 32; 
-    let totalSamplesProcessed = 0;
-    let lastBeatSampleIndex = 0;
+      let screenCursor = 0.0;
+      let lastFrameTime = 0;
+      let timeAccumulator = 0;
+      let currentPlaybackRate = H10_RATE;
+      let prevRaw = 0,
+        prevFiltered = 0;
+      let dcOffset = 0;
 
-    // TUNING
-    let TARGET_LATENCY = 50;   
-    let SERVO_GAIN = 0.01;     
+      // GAIN & AGC
+      let gainMult = 20.0;
+      let gainDivisor = 300 / gainMult;
+      let isAutoGain = false;
+      let signalMin = 0,
+        signalMax = 0,
+        agcTargetHeight = 150;
+      const MAX_ECG_VAL = 3000;
 
-    let beatIntensity = 0.0; 
-    const BEAT_DECAY = 0.05; 
-    let audioCtx = null;
-    let soundEnabled = true;
-    let isLogVisible = false;
+      // SWEEP
+      let sweepSpeedMm = 25.0;
+      let pixelsPerSample = 0.73;
 
-    // --- LOGIC ---
-    window.adjSweep = (delta) => {
+      // HR
+      let hrSource = "ble";
+      let lastBleBpm = 0;
+
+      // HRV VARS
+      let hrvSource = "ble";
+      let bleRRIntervals = [];
+      let ecgRRIntervals = [];
+      let hrvWindowSeconds = 300; // 5 MINUTES DEFAULT
+      const MAX_BUFFER_SIZE = 3000; // Enough for >20 mins @ 120bpm
+
+      // BLE RHYTHM
+      let bleBeatQueue = [];
+      let bleNextBeatTarget = 0;
+      let lastValidInterval = 1000;
+
+      // QRS
+      let qrsThreshold = 50000;
+      let qrsLastSample = 0;
+      let integralBuf = [];
+      const INTEGRAL_WIN_SIZE = 5;
+      const QRS_REFRACTORY_SAMPLES = 32;
+      let totalSamplesProcessed = 0;
+      let lastBeatSampleIndex = 0;
+
+      // TUNING
+      let TARGET_LATENCY = 50;
+      let SERVO_GAIN = 0.01;
+
+      let beatIntensity = 0.0;
+      const BEAT_DECAY = 0.05;
+      let audioCtx = null;
+      let soundEnabled = true;
+      let isLogVisible = false;
+
+      // --- COLLAPSIBLE LOGIC ---
+      window.togglePanel = (el) => {
+        const panel = el.parentElement;
+        panel.classList.toggle("collapsed");
+      };
+
+      // --- LOGIC ---
+      window.adjSweep = (delta) => {
         sweepSpeedMm += delta;
         if (sweepSpeedMm < 12.5) sweepSpeedMm = 12.5;
         if (sweepSpeedMm > 50.0) sweepSpeedMm = 50.0;
-        pixelsPerSample = (sweepSpeedMm * 3.78) / 130; 
-        document.getElementById('sweepVal').innerText = sweepSpeedMm.toFixed(1);
-    };
-    adjSweep(0);
+        pixelsPerSample = (sweepSpeedMm * 3.78) / 130;
+        document.getElementById("sweepVal").innerText = sweepSpeedMm.toFixed(1);
+      };
+      adjSweep(0);
 
-    window.setHrSource = (source) => {
+      window.setHrSource = (source) => {
         hrSource = source;
-        document.getElementById('hrModeBle').classList.toggle('active', source === 'ble');
-        document.getElementById('hrModeEcg').classList.toggle('active', source === 'ecg');
+        document
+          .getElementById("hrModeBle")
+          .classList.toggle("active", source === "ble");
+        document
+          .getElementById("hrModeEcg")
+          .classList.toggle("active", source === "ecg");
+        if (source === "ble") {
+          bleBeatQueue = [];
+          bleNextBeatTarget = 0;
+        }
         log("HR Source switched to " + source.toUpperCase());
-    };
+      };
 
-    function triggerBeat(bpm) {
-        document.getElementById('hrVal').innerText = bpm;
+      window.setHrvSource = (source) => {
+        hrvSource = source;
+        document
+          .getElementById("hrvModeBle")
+          .classList.toggle("active", source === "ble");
+        document
+          .getElementById("hrvModeEcg")
+          .classList.toggle("active", source === "ecg");
+        log("HRV Source switched to " + source.toUpperCase());
+        updateHrvDisplay();
+      };
+
+      window.adjHrvWindow = (delta) => {
+        hrvWindowSeconds += delta;
+        if (hrvWindowSeconds < 30) hrvWindowSeconds = 30; // Min 30s
+        if (hrvWindowSeconds > 1200) hrvWindowSeconds = 1200; // Max 20m
+        document.getElementById("hrvWinVal").innerText =
+          (hrvWindowSeconds / 60).toFixed(1) + "m";
+        updateHrvDisplay();
+      };
+
+      function triggerBeat(bpm) {
+        document.getElementById("hrVal").innerText = bpm;
         beatIntensity = 1.0;
         playBeep();
-    }
+      }
 
-    function log(msg, data = null) {
-        const d = document.getElementById('log-content');
+      // --- FULL HRV CALCULATION ---
+      function calculateFullHrv(rrs) {
+        if (rrs.length < 30) return null;
+
+        // TIME DOMAIN
+        const n = rrs.length;
+        const mean = rrs.reduce((a, b) => a + b, 0) / n;
+        const sqDiffs = rrs.map((v) => Math.pow(v - mean, 2));
+        const sdnn = Math.sqrt(sqDiffs.reduce((a, b) => a + b, 0) / n);
+
+        let sumSqDiffSuccessive = 0;
+        let count50 = 0;
+        for (let i = 1; i < n; i++) {
+          let diff = Math.abs(rrs[i] - rrs[i - 1]);
+          sumSqDiffSuccessive += Math.pow(diff, 2);
+          if (diff > 50) count50++;
+        }
+        const rmssd = Math.sqrt(sumSqDiffSuccessive / (n - 1));
+        const lnRmssd = Math.log(rmssd);
+        const pnn50 = (count50 / (n - 1)) * 100;
+
+        // FREQ DOMAIN
+        let t = [0];
+        for (let i = 0; i < n; i++) t.push(t[i] + rrs[i]);
+        t.shift();
+
+        const fs = 4;
+        const totalTime = t[t.length - 1] / 1000;
+        const numSamples = Math.floor(totalTime * fs);
+        const resampled = [];
+        let rIdx = 0;
+
+        for (let i = 0; i < numSamples; i++) {
+          const time = i / fs;
+          while (rIdx < t.length - 1 && t[rIdx + 1] / 1000 < time) rIdx++;
+          if (rIdx >= t.length - 1) break;
+          const t0 = t[rIdx] / 1000,
+            t1 = t[rIdx + 1] / 1000;
+          const y0 = rrs[rIdx],
+            y1 = rrs[rIdx + 1];
+          resampled.push(y0 + ((y1 - y0) * (time - t0)) / (t1 - t0));
+        }
+
+        const meanR = resampled.reduce((a, b) => a + b, 0) / resampled.length;
+        const signal = resampled.map((v) => v - meanR);
+
+        let sumWindowSq = 0;
+        const windowed = signal.map((v, i) => {
+          const w =
+            0.5 * (1 - Math.cos((2 * Math.PI * i) / (signal.length - 1)));
+          sumWindowSq += w * w;
+          return v * w;
+        });
+
+        let lfSum = 0,
+          hfSum = 0,
+          totalSum = 0;
+        let lfPeak = 0,
+          hfPeak = 0,
+          lfPeakVal = 0,
+          hfPeakVal = 0;
+
+        const N = windowed.length;
+        for (let k = 0; k < N / 2; k++) {
+          const freq = (k * fs) / N;
+          if (freq > 0.4) break;
+
+          let sumReal = 0,
+            sumImag = 0;
+          for (let x = 0; x < N; x++) {
+            const angle = (2 * Math.PI * k * x) / N;
+            sumReal += windowed[x] * Math.cos(angle);
+            sumImag -= windowed[x] * Math.sin(angle);
+          }
+          const rawPower = (sumReal ** 2 + sumImag ** 2) / N;
+
+          if (freq >= 0) totalSum += rawPower;
+          if (freq >= 0.04 && freq < 0.15) {
+            lfSum += rawPower;
+            if (rawPower > lfPeakVal) {
+              lfPeakVal = rawPower;
+              lfPeak = freq;
+            }
+          } else if (freq >= 0.15 && freq < 0.4) {
+            hfSum += rawPower;
+            if (rawPower > hfPeakVal) {
+              hfPeakVal = rawPower;
+              hfPeak = freq;
+            }
+          }
+        }
+
+        const normFactor = sumWindowSq;
+
+        return {
+          rmssd,
+          sdnn,
+          lnRmssd,
+          pnn50,
+          mean,
+          tp: totalSum / normFactor,
+          lf: lfSum / normFactor,
+          hf: hfSum / normFactor,
+          ratio: hfSum > 0 ? lfSum / hfSum : 0,
+          lfp: lfPeak,
+          hfp: hfPeak,
+        };
+      }
+
+      function updateHrvDisplay() {
+        let fullHistory = hrvSource === "ble" ? bleRRIntervals : ecgRRIntervals;
+
+        // BUFFER MANAGEMENT (Cap at MAX)
+        if (fullHistory.length > MAX_BUFFER_SIZE) {
+          fullHistory = fullHistory.slice(-MAX_BUFFER_SIZE);
+          if (hrvSource === "ble") bleRRIntervals = fullHistory;
+          else ecgRRIntervals = fullHistory;
+        }
+
+        // --- TIME-BASED SLICING ---
+        let windowedIntervals = [];
+        let timeSum = 0;
+        const targetMs = hrvWindowSeconds * 1000;
+
+        for (let i = fullHistory.length - 1; i >= 0; i--) {
+          timeSum += fullHistory[i];
+          windowedIntervals.unshift(fullHistory[i]);
+          if (timeSum >= targetMs) break;
+        }
+
+        const metrics = calculateFullHrv(windowedIntervals);
+        if (!metrics) return;
+
+        document.getElementById("v_rmssd").innerText = metrics.rmssd.toFixed(2);
+        document.getElementById("v_sdnn").innerText = metrics.sdnn.toFixed(2);
+        document.getElementById("v_lnrmssd").innerText =
+          metrics.lnRmssd.toFixed(2);
+        document.getElementById("v_pnn50").innerText = metrics.pnn50.toFixed(0);
+        document.getElementById("v_meanrr").innerText = metrics.mean.toFixed(2);
+
+        document.getElementById("v_tp").innerText = metrics.tp.toFixed(2);
+        document.getElementById("v_ratio").innerText = metrics.ratio.toFixed(2);
+        document.getElementById("v_lf").innerText = metrics.lf.toFixed(2);
+        document.getElementById("v_hf").innerText = metrics.hf.toFixed(2);
+        document.getElementById("v_lfp").innerText = metrics.lfp.toFixed(3);
+        document.getElementById("v_hfp").innerText = metrics.hfp.toFixed(3);
+      }
+
+      function log(msg, data = null) {
+        const d = document.getElementById("log-content");
         while (d.childElementCount >= 50) d.removeChild(d.firstElementChild);
-        const time = new Date().toLocaleTimeString().split(' ')[0];
-        let dataHtml = '';
+        const time = new Date().toLocaleTimeString().split(" ")[0];
+        let dataHtml = "";
         if (data !== null) {
-            try { if (typeof data === 'object') dataHtml = `<span class="log-data">${JSON.stringify(data)}</span>`; else dataHtml = `<span class="log-data">Value: ${data}</span>`; } catch (e) {}
+          try {
+            if (typeof data === "object")
+              dataHtml = `<span class="log-data">${JSON.stringify(
+                data
+              )}</span>`;
+            else dataHtml = `<span class="log-data">Value: ${data}</span>`;
+          } catch (e) {}
         }
         d.innerHTML += `<div class="log-entry"><span class="log-time">[${time}]</span> ${msg}${dataHtml}</div>`;
-        if (isLogVisible) document.getElementById('log-overlay').scrollTop = document.getElementById('log-overlay').scrollHeight;
-    }
+        if (isLogVisible)
+          document.getElementById("log-overlay").scrollTop =
+            document.getElementById("log-overlay").scrollHeight;
+      }
 
-    window.setGainMode = (auto) => {
+      window.setGainMode = (auto) => {
         isAutoGain = auto;
-        document.getElementById('modeManual').classList.toggle('active', !auto);
-        document.getElementById('modeAuto').classList.toggle('active', auto);
-        document.getElementById('manualControls').style.display = auto ? 'none' : 'block';
-        document.getElementById('autoControls').style.display = auto ? 'block' : 'none';
-        if(auto) { signalMin = 0; signalMax = 0; } else { gainDivisor = 300 / gainMult; }
+        document.getElementById("modeManual").classList.toggle("active", !auto);
+        document.getElementById("modeAuto").classList.toggle("active", auto);
+        document.getElementById("manualControls").style.display = auto
+          ? "none"
+          : "block";
+        document.getElementById("autoControls").style.display = auto
+          ? "block"
+          : "none";
+        if (auto) {
+          signalMin = 0;
+          signalMax = 0;
+        } else {
+          gainDivisor = 300 / gainMult;
+        }
         log(auto ? "Switched to AUTO GAIN" : "Switched to MANUAL GAIN");
-    };
+      };
 
-    window.adjGain = (dir) => {
+      window.adjGain = (dir) => {
         if (isAutoGain) return;
-        if (dir > 0) gainMult *= 1.25; else gainMult /= 1.25;
-        gainDivisor = 300 / gainMult; 
-        document.getElementById('gainVal').innerText = gainMult.toFixed(2) + "x";
-    };
+        if (dir > 0) gainMult *= 1.25;
+        else gainMult /= 1.25;
+        gainDivisor = 300 / gainMult;
+        document.getElementById("gainVal").innerText =
+          gainMult.toFixed(2) + "x";
+      };
 
-    window.adjAgcTarget = (delta) => {
+      window.adjAgcTarget = (delta) => {
         agcTargetHeight += delta;
         if (agcTargetHeight < 50) agcTargetHeight = 50;
-        document.getElementById('agcTargetVal').innerText = agcTargetHeight + "px";
-    };
+        document.getElementById("agcTargetVal").innerText =
+          agcTargetHeight + "px";
+      };
 
-    function updateAGC(sampleValue) {
+      function updateAGC(sampleValue) {
         if (!isAutoGain) return;
-        
-        // INPUT CLAMP (FIRST LINE OF DEFENSE)
-        // If sampleValue is wildly huge (artifact), ignore it for AGC purposes
         if (Math.abs(sampleValue) > MAX_ECG_VAL) return;
-
-        // Normal Decay - Slowed down to hold envelope longer (prevent gain pumping)
-        const decay = 0.002; 
+        const decay = 0.002;
         if (sampleValue > signalMax) signalMax = sampleValue;
         else signalMax -= (signalMax - sampleValue) * decay;
-        
         if (sampleValue < signalMin) signalMin = sampleValue;
         else signalMin += (sampleValue - signalMin) * decay;
-
         let amplitude = signalMax - signalMin;
-        if (amplitude < 100) amplitude = 100; 
-
-        // SMART RECOVERY (The 10-second fix)
-        // Check current calculated divisor vs ideal divisor
+        if (amplitude < 100) amplitude = 100;
         let idealDivisor = amplitude / agcTargetHeight;
         if (idealDivisor < 0.1) idealDivisor = 0.1;
-        
-        // If we are way zoomed out (gainDivisor huge) but signal is small (idealDivisor small)
-        // Collapse faster!
-        let smoothing = 0.99; // Was 0.95 - Increased smoothing to prevent intra-beat distortion
+        let smoothing = 0.99;
         if (gainDivisor > idealDivisor * 5) {
-            smoothing = 0.9; // Fast collapse
+          smoothing = 0.9;
         }
-
-        gainDivisor = (gainDivisor * smoothing) + (idealDivisor * (1-smoothing));
-        
+        gainDivisor = gainDivisor * smoothing + idealDivisor * (1 - smoothing);
         let currentMult = 300 / gainDivisor;
-        document.getElementById('agcCurrentGain').innerText = "CURRENT: " + currentMult.toFixed(1) + "x";
-    }
-    
-    function checkQRS(val) {
+        document.getElementById("agcCurrentGain").innerText =
+          "CURRENT: " + currentMult.toFixed(1) + "x";
+      }
+
+      function checkQRS(val) {
         totalSamplesProcessed++;
         let slope = val - qrsLastSample;
         qrsLastSample = val;
@@ -353,119 +1077,178 @@
         integralBuf.push(sq);
         if (integralBuf.length > INTEGRAL_WIN_SIZE) integralBuf.shift();
         let integrated = 0;
-        for(let v of integralBuf) integrated += v;
-        integrated /= integralBuf.length; 
+        for (let v of integralBuf) integrated += v;
+        integrated /= integralBuf.length;
 
-        qrsThreshold *= 0.999; 
-        if (qrsThreshold < 5000) qrsThreshold = 5000; 
+        qrsThreshold *= 0.999;
+        if (qrsThreshold < 5000) qrsThreshold = 5000;
 
-        if (integrated > qrsThreshold && (totalSamplesProcessed - lastBeatSampleIndex > QRS_REFRACTORY_SAMPLES)) {
-            let samplesDiff = totalSamplesProcessed - lastBeatSampleIndex;
-            lastBeatSampleIndex = totalSamplesProcessed;
-            qrsThreshold = integrated * 0.8; 
-            let seconds = samplesDiff / 130.0;
-            let instBpm = 60 / seconds;
-            if (instBpm > 30 && instBpm < 240) {
-                rrIntervals.push(instBpm);
-                if (rrIntervals.length > 5) rrIntervals.shift();
-                let avgBpm = rrIntervals.reduce((a,b)=>a+b, 0) / rrIntervals.length;
-                return { isBeat: true, bpm: Math.round(avgBpm) };
-            }
+        if (
+          integrated > qrsThreshold &&
+          totalSamplesProcessed - lastBeatSampleIndex > QRS_REFRACTORY_SAMPLES
+        ) {
+          let samplesDiff = totalSamplesProcessed - lastBeatSampleIndex;
+          lastBeatSampleIndex = totalSamplesProcessed;
+          qrsThreshold = integrated * 0.8;
+          let seconds = samplesDiff / 130.0;
+          let instBpm = 60 / seconds;
+          let rrMs = seconds * 1000;
+          if (instBpm > 30 && instBpm < 240) {
+            ecgRRIntervals.push(rrMs);
+            updateHrvDisplay();
+            return { isBeat: true, bpm: Math.round(instBpm) };
+          }
         }
         return { isBeat: false, bpm: 0 };
-    }
+      }
 
-    window.adjTarget = (delta) => { TARGET_LATENCY += delta; if (TARGET_LATENCY < 10) TARGET_LATENCY = 10; if (TARGET_LATENCY > 2000) TARGET_LATENCY = 2000; document.getElementById('dispTarget').innerText = TARGET_LATENCY + " ms"; };
-    window.adjForce = (delta) => { SERVO_GAIN += delta; if (SERVO_GAIN < 0.001) SERVO_GAIN = 0.001; if (SERVO_GAIN > 1.0) SERVO_GAIN = 1.0; document.getElementById('dispForce').innerText = SERVO_GAIN.toFixed(3); };
-    window.toggleLog = () => { isLogVisible = !isLogVisible; const overlay = document.getElementById('log-overlay'); const btn = document.getElementById('log-toggle-btn'); if (isLogVisible) { overlay.style.display = 'block'; btn.innerText = 'HIDE LOG'; overlay.scrollTop = overlay.scrollHeight; } else { overlay.style.display = 'none'; btn.innerText = 'SHOW LOG'; } };
-    window.clearLog = () => document.getElementById('log-content').innerHTML = '';
+      window.adjTarget = (delta) => {
+        TARGET_LATENCY += delta;
+        if (TARGET_LATENCY < 10) TARGET_LATENCY = 10;
+        if (TARGET_LATENCY > 2000) TARGET_LATENCY = 2000;
+        document.getElementById("dispTarget").innerText =
+          TARGET_LATENCY + " ms";
+      };
+      window.adjForce = (delta) => {
+        SERVO_GAIN += delta;
+        if (SERVO_GAIN < 0.001) SERVO_GAIN = 0.001;
+        if (SERVO_GAIN > 1.0) SERVO_GAIN = 1.0;
+        document.getElementById("dispForce").innerText = SERVO_GAIN.toFixed(3);
+      };
+      window.toggleLog = () => {
+        isLogVisible = !isLogVisible;
+        const overlay = document.getElementById("log-overlay");
+        const btn = document.getElementById("log-toggle-btn");
+        if (isLogVisible) {
+          overlay.style.display = "block";
+          btn.innerText = "HIDE LOG";
+          overlay.scrollTop = overlay.scrollHeight;
+        } else {
+          overlay.style.display = "none";
+          btn.innerText = "SHOW LOG";
+        }
+      };
+      window.clearLog = () =>
+        (document.getElementById("log-content").innerHTML = "");
 
-    function initAudio() { if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); if (audioCtx.state === 'suspended') audioCtx.resume(); }
+      function initAudio() {
+        if (!audioCtx)
+          audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (audioCtx.state === "suspended") audioCtx.resume();
+      }
 
-    function playBeep() {
+      async function playBeep() {
         if (!soundEnabled || !audioCtx) return;
-        const type = document.getElementById('soundType').value;
+        const type = document.getElementById("soundType").value;
         const osc = audioCtx.createOscillator();
         const gainNode = audioCtx.createGain();
         osc.connect(gainNode);
         gainNode.connect(audioCtx.destination);
         const now = audioCtx.currentTime;
-        
-        // Start at 0 to avoid clicks
         gainNode.gain.setValueAtTime(0, now);
+        if (type === "simple") {
+          osc.type = "sine";
+          osc.frequency.setValueAtTime(1000, now);
+          gainNode.gain.linearRampToValueAtTime(0.1, now + 0.01);
+          gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+          osc.start(now);
+          osc.stop(now + 0.1);
+        } else if (type === "medical") {
+          osc.type = "sine";
+          osc.frequency.setValueAtTime(880, now);
+          gainNode.gain.linearRampToValueAtTime(0.1, now + 0.01);
+          gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.15);
+          osc.start(now);
+          osc.stop(now + 0.15);
+        } else if (type === "thud") {
+          osc.type = "triangle";
+          osc.frequency.setValueAtTime(150, now);
+          osc.frequency.exponentialRampToValueAtTime(50, now + 0.1);
+          gainNode.gain.linearRampToValueAtTime(0.3, now + 0.01);
+          gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.2);
+          osc.start(now);
+          osc.stop(now + 0.2);
+        } else if (type === "8bit") {
+          osc.type = "square";
+          osc.frequency.setValueAtTime(440, now);
+          gainNode.gain.linearRampToValueAtTime(0.05, now + 0.01);
+          gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.1);
+          osc.start(now);
+          osc.stop(now + 0.1);
+        }
+      }
 
-        if (type === 'simple') { 
-            osc.type = 'sine'; 
-            osc.frequency.setValueAtTime(1000, now); 
-            gainNode.gain.linearRampToValueAtTime(0.1, now + 0.01); // Attack
-            gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.1); 
-            osc.start(now); 
-            osc.stop(now + 0.1); 
+      window.toggleSound = () => {
+        soundEnabled = !soundEnabled;
+        const btn = document.getElementById("btnSound");
+        if (soundEnabled) {
+          btn.innerText = "BEEP: ON";
+          btn.className = "toggle-btn toggle-on";
+          if (audioCtx) playBeep();
+        } else {
+          btn.innerText = "BEEP: MUTE";
+          btn.className = "toggle-btn toggle-off";
         }
-        else if (type === 'medical') { 
-            osc.type = 'sine'; 
-            osc.frequency.setValueAtTime(880, now); 
-            gainNode.gain.linearRampToValueAtTime(0.1, now + 0.01);
-            gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.15); 
-            osc.start(now); 
-            osc.stop(now + 0.15); 
-        }
-        else if (type === 'thud') { 
-            osc.type = 'triangle'; 
-            osc.frequency.setValueAtTime(150, now); 
-            osc.frequency.exponentialRampToValueAtTime(50, now + 0.1); 
-            gainNode.gain.linearRampToValueAtTime(0.3, now + 0.01);
-            gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.2); 
-            osc.start(now); 
-            osc.stop(now + 0.2); 
-        }
-        else if (type === '8bit') { 
-            osc.type = 'square'; 
-            osc.frequency.setValueAtTime(440, now); 
-            gainNode.gain.linearRampToValueAtTime(0.05, now + 0.01);
-            gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.1); 
-            osc.start(now); 
-            osc.stop(now + 0.1); 
-        }
-    }
+      };
 
-    window.toggleSound = () => { soundEnabled = !soundEnabled; const btn = document.getElementById('btnSound'); if (soundEnabled) { btn.innerText = "SOUND: ON"; btn.className = "toggle-btn toggle-on"; if (audioCtx) playBeep(); } else { btn.innerText = "SOUND: MUTE"; btn.className = "toggle-btn toggle-off"; } };
-
-    function resize() {
+      function resize() {
         const p = canvas.parentElement;
         canvas.width = p.clientWidth;
         canvas.height = p.clientHeight;
         if (screenBuffer.length !== canvas.width) {
-            screenBuffer = new Float32Array(canvas.width).fill(canvas.height / 2);
-            markerBuffer = new Uint8Array(canvas.width).fill(0); 
-            screenCursor = 0;
+          screenBuffer = new Float32Array(canvas.width).fill(canvas.height / 2);
+          markerBuffer = new Uint8Array(canvas.width).fill(0);
+          screenCursor = 0;
         }
-    }
-    window.onresize = resize;
-    resize();
+      }
+      window.onresize = resize;
+      resize();
 
-    function drawHeart() {
+      function drawHeart() {
         beatCtx.clearRect(0, 0, beatCanvas.width, beatCanvas.height);
         const w = beatCanvas.width;
         const h = beatCanvas.height;
-        const scale = 1.0; 
-        beatCtx.save(); beatCtx.translate(w/2, h/2); beatCtx.scale(scale, scale); beatCtx.beginPath();
-        beatCtx.moveTo(0, -10); beatCtx.bezierCurveTo(-25, -30, -50, -10, 0, 32); beatCtx.bezierCurveTo(50, -10, 25, -30, 0, -10); beatCtx.closePath();
-        const r = Math.floor(50 + (205 * beatIntensity)); beatCtx.fillStyle = `rgb(${r}, 0, 0)`; beatCtx.shadowBlur = 0; beatCtx.fill(); beatCtx.restore();
-    }
+        const scale = 1.0;
+        beatCtx.save();
+        beatCtx.translate(w / 2, h / 2);
+        beatCtx.scale(scale, scale);
+        beatCtx.beginPath();
+        beatCtx.moveTo(0, -10);
+        beatCtx.bezierCurveTo(-25, -30, -50, -10, 0, 32);
+        beatCtx.bezierCurveTo(50, -10, 25, -30, 0, -10);
+        beatCtx.closePath();
+        const r = Math.floor(50 + 205 * beatIntensity);
+        beatCtx.fillStyle = `rgb(${r}, 0, 0)`;
+        beatCtx.shadowBlur = 0;
+        beatCtx.fill();
+        beatCtx.restore();
+      }
 
-    function loop(timestamp) {
+      function loop(timestamp) {
         if (!lastFrameTime) lastFrameTime = timestamp;
-        const dt = (timestamp - lastFrameTime) / 1000; 
+        const dt = (timestamp - lastFrameTime) / 1000;
         lastFrameTime = timestamp;
 
-        // BLE BEAT SIMULATION
-        if (hrSource === 'ble' && lastBleBpm > 30) {
-            if (timestamp > nextBeatTime) {
-                triggerBeat(lastBleBpm);
-                const intervalMs = (60 / lastBleBpm) * 1000;
-                nextBeatTime = timestamp + intervalMs;
+        // --- BLE RHYTHM SCHEDULER (SMOOTH FALLBACK FIX) ---
+        if (hrSource === "ble") {
+          if (bleNextBeatTarget === 0) bleNextBeatTarget = timestamp;
+
+          if (timestamp >= bleNextBeatTarget) {
+            if (lastBleBpm > 0) triggerBeat(lastBleBpm);
+
+            let interval = 0;
+            if (bleBeatQueue.length > 0) {
+              interval = bleBeatQueue.shift();
+              lastValidInterval = interval; // UPDATE LAST VALID
+            } else {
+              // SMOOTH FALLBACK
+              interval = lastValidInterval;
             }
+
+            bleNextBeatTarget += interval;
+            if (bleNextBeatTarget < timestamp - 1000)
+              bleNextBeatTarget = timestamp + interval;
+          }
         }
 
         beatIntensity -= BEAT_DECAY;
@@ -474,165 +1257,265 @@
 
         const bufferMs = (queue.length / H10_RATE) * 1000;
         const error = bufferMs - TARGET_LATENCY;
-        let targetRate = H10_RATE + (error * SERVO_GAIN); 
-        if (targetRate < 80) targetRate = 80; if (targetRate > 200) targetRate = 200;
-        currentPlaybackRate = (currentPlaybackRate * 0.95) + (targetRate * 0.05);
+        let targetRate = H10_RATE + error * SERVO_GAIN;
+        if (targetRate < 80) targetRate = 80;
+        if (targetRate > 200) targetRate = 200;
+        currentPlaybackRate = currentPlaybackRate * 0.95 + targetRate * 0.05;
 
-        document.getElementById('actSpd').innerText = currentPlaybackRate.toFixed(1) + " Hz";
-        document.getElementById('bufStat').innerText = bufferMs.toFixed(0) + " ms";
+        document.getElementById("actSpd").innerText =
+          currentPlaybackRate.toFixed(1) + " Hz";
+        document.getElementById("bufStat").innerText =
+          bufferMs.toFixed(0) + " ms";
         const barW = Math.min((bufferMs / 500) * 100, 100);
-        document.getElementById('bufBar').style.width = barW + "%";
-        document.getElementById('bufBar').style.background = (barW < 2) ? 'red' : '#0f0';
+        document.getElementById("bufBar").style.width = barW + "%";
+        document.getElementById("bufBar").style.background =
+          barW < 2 ? "red" : "#0f0";
 
         timeAccumulator += dt;
         const step = 1 / currentPlaybackRate;
-        
-        // ERASER LOGIC
+
         let clearStart = Math.floor(screenCursor + 2);
-        let clearEnd = Math.floor(screenCursor + 15); 
-        for(let i=clearStart; i<=clearEnd; i++) {
-            let idx = i % canvas.width;
-            markerBuffer[idx] = 0; 
+        let clearEnd = Math.floor(screenCursor + 15);
+        for (let i = clearStart; i <= clearEnd; i++) {
+          let idx = i % canvas.width;
+          markerBuffer[idx] = 0;
         }
 
         while (timeAccumulator >= step) {
-            timeAccumulator -= step;
-            if (queue.length > 0) {
-                const packet = queue.shift(); 
-                const val = packet.val;
-                
-                // ARTIFACT CLAMPING
-                let safeVal = val;
-                if(safeVal > MAX_ECG_VAL) safeVal = MAX_ECG_VAL;
-                if(safeVal < -MAX_ECG_VAL) safeVal = -MAX_ECG_VAL;
+          timeAccumulator -= step;
+          if (queue.length > 0) {
+            const packet = queue.shift();
+            const val = packet.val;
+            updateAGC(val - dcOffset);
+            dcOffset = dcOffset * 0.995 + val * 0.005;
+            const centered = val - dcOffset;
+            const y = canvas.height / 2 - centered / gainDivisor;
 
-                updateAGC(safeVal - dcOffset);
-                dcOffset = (dcOffset * 0.995) + (safeVal * 0.005);
-                const centered = safeVal - dcOffset;
-                const y = (canvas.height / 2) - (centered / gainDivisor);
-                
-                let startX = Math.floor(screenCursor);
-                screenCursor += pixelsPerSample;
-                if (screenCursor >= canvas.width) { screenCursor -= canvas.width; startX = 0; }
-                let endX = Math.floor(screenCursor);
-                
-                if (packet.isBeat && hrSource === 'ecg') triggerBeat(packet.bpm);
-
-                for (let x = startX; x <= endX; x++) {
-                    if(x < screenBuffer.length) {
-                        screenBuffer[x] = y;
-                        if (packet.isBeat) markerBuffer[x] = 1; 
-                    }
-                }
+            let startX = Math.floor(screenCursor);
+            screenCursor += pixelsPerSample;
+            if (screenCursor >= canvas.width) {
+              screenCursor -= canvas.width;
+              startX = 0;
             }
+            let endX = Math.floor(screenCursor);
+
+            if (packet.isBeat && hrSource === "ecg") triggerBeat(packet.bpm);
+
+            for (let x = startX; x <= endX; x++) {
+              if (x < screenBuffer.length) {
+                screenBuffer[x] = y;
+                if (packet.isBeat) markerBuffer[x] = 1;
+              }
+            }
+          }
         }
 
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-        ctx.strokeStyle = '#002200'; ctx.lineWidth = 1; ctx.beginPath();
-        for(let x=0;x<canvas.width;x+=50){ctx.moveTo(x,0);ctx.lineTo(x,canvas.height);}
+        ctx.strokeStyle = "#002200";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        for (let x = 0; x < canvas.width; x += 50) {
+          ctx.moveTo(x, 0);
+          ctx.lineTo(x, canvas.height);
+        }
         ctx.stroke();
 
-        ctx.lineWidth = 2; ctx.strokeStyle = '#0f0'; ctx.shadowBlur = 0; ctx.beginPath();
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = "#0f0";
+        ctx.shadowBlur = 0;
+        ctx.beginPath();
         let isDrawing = false;
         for (let i = 0; i < screenBuffer.length; i++) {
-            const dist = Math.abs(i - screenCursor);
-            if (dist < 15 || (i < 10 && screenCursor > canvas.width-10)) { isDrawing = false; continue; }
-            if (!isDrawing) { ctx.moveTo(i, screenBuffer[i]); isDrawing = true; } else { ctx.lineTo(i, screenBuffer[i]); }
+          const dist = Math.abs(i - screenCursor);
+          if (dist < 15 || (i < 10 && screenCursor > canvas.width - 10)) {
+            isDrawing = false;
+            continue;
+          }
+          if (!isDrawing) {
+            ctx.moveTo(i, screenBuffer[i]);
+            isDrawing = true;
+          } else {
+            ctx.lineTo(i, screenBuffer[i]);
+          }
         }
         ctx.stroke();
-        
-        ctx.fillStyle = '#0f0';
+
+        ctx.fillStyle = "#0f0";
         for (let i = 0; i < markerBuffer.length; i++) {
-            if (markerBuffer[i] === 1) {
-                const dist = Math.abs(i - screenCursor);
-                if (dist > 15 && dist < canvas.width - 15) {
-                    ctx.beginPath();
-                    ctx.moveTo(i - 6, 20); ctx.lineTo(i + 6, 20); ctx.lineTo(i, 35); 
-                    ctx.fill();
-                }
+          if (markerBuffer[i] === 1) {
+            const dist = Math.abs(i - screenCursor);
+            if (dist > 15 && dist < canvas.width - 15) {
+              ctx.beginPath();
+              ctx.moveTo(i - 6, 20);
+              ctx.lineTo(i + 6, 20);
+              ctx.lineTo(i, 35);
+              ctx.fill();
             }
+          }
         }
-        
-        ctx.fillStyle = '#002200'; const barX = Math.floor(screenCursor); ctx.fillRect(barX, 0, 4, canvas.height);
+
+        ctx.fillStyle = "#002200";
+        const barX = Math.floor(screenCursor);
+        ctx.fillRect(barX, 0, 4, canvas.height);
         requestAnimationFrame(loop);
-    }
-    requestAnimationFrame(loop);
+      }
+      requestAnimationFrame(loop);
 
-    document.getElementById('btnConnect').onclick = async () => {
-        try {
-            initAudio();
-            log("Connecting...");
-            const device = await navigator.bluetooth.requestDevice({ filters: [{ namePrefix: "Polar H10" }], optionalServices: [SVC_PMD, SVC_HR] });
-            const server = await device.gatt.connect();
-            document.getElementById('status').innerText = "ONLINE";
-            document.getElementById('btnConnect').disabled = true;
-            log("Connected.");
+      // --- PACKET PARSING ---
+      function parseHeartRate(value) {
+        const flags = value.getUint8(0);
+        const hr16 = flags & 0x01;
+        const rrPresent = flags & 0x10;
+        let offset = 1;
 
-            const hrSvc = await server.getPrimaryService(SVC_HR);
-            const hrCh = await hrSvc.getCharacteristic(CHR_HR);
-            await hrCh.startNotifications();
-            hrCh.addEventListener('characteristicvaluechanged', e => {
-                const hr = e.target.value.getUint8(1);
-                lastBleBpm = hr;
-                // Removed direct triggerBeat call here, handled in loop now
-                if (hrSource === 'ble') document.getElementById('hrVal').innerText = hr;
-            });
-
-            const pmdSvc = await server.getPrimaryService(SVC_PMD);
-            const cpCh = await pmdSvc.getCharacteristic(CHR_CP);
-            const dataCh = await pmdSvc.getCharacteristic(CHR_DATA);
-            await cpCh.startNotifications();
-            log("Sending Start...");
-            await cpCh.writeValue(new Uint8Array([0x02, 0x00, 0x00, 0x01, 0x82, 0x00, 0x01, 0x01, 0x0E, 0x00]));
-            
-            await dataCh.startNotifications();
-            dataCh.addEventListener('characteristicvaluechanged', e => {
-                const val = e.target.value;
-                if (val.getUint8(0) !== 0x00) return; 
-                for (let i = 10; i < val.byteLength; i += 3) {
-                    if (i + 2 >= val.byteLength) break;
-                    let sample = val.getUint8(i) | (val.getUint8(i+1) << 8) | (val.getUint8(i+2) << 16);
-                    if (sample & 0x800000) sample -= 0x1000000;
-                    const alpha = 0.995;
-                    let filtered = alpha * (prevFiltered + sample - prevRaw);
-                    prevRaw = sample;
-                    prevFiltered = filtered;
-                    const qrsRes = checkQRS(filtered);
-                    queue.push({ val: filtered, isBeat: qrsRes.isBeat, bpm: qrsRes.bpm });
-                }
-            });
-            log("Stream Active.");
-
-            // Log sucessful connection to Google Analytics
-            gtag('event', 'connection_success', {
-                event_category: 'connection',
-                event_label: 'Polar H10 Stream',
-                value: 1
-            });
-        } catch (e) {
-            log("Err: " + e.message);
-            
-            // Log error to Google Analytics
-            gtag('event', 'connection_error', {
-                event_category: 'connection',
-                event_label: 'Polar H10 Connection Error',
-                value: 0
-            });
-            document.getElementById('btnConnect').disabled = false;
+        let bpm = 0;
+        if (hr16) {
+          bpm = value.getUint16(offset, true);
+          offset += 2;
+        } else {
+          bpm = value.getUint8(offset);
+          offset += 1;
         }
-    };
-    log("System ready. Click CONNECT H10 to start.");
-</script>
 
-<div id="analytics-consent" style="position: fixed; bottom: 10px; left: 50%; transform: translateX(-50%); background: #001100; color: #0f0; padding: 10px 20px; text-align: center; border: 2px solid #0f0; border-radius: 5px; z-index: 100;">
-    This site uses Google Analytics to collect statistics. By using this site, you consent to the use of cookies. 
-    <button onclick="dismissConsent()" style="margin-left: 10px; background: #0f0; color: #000; border: none; padding: 5px 10px; cursor: pointer;">Dismiss</button>
-</div>
-<script>
-    function dismissConsent() {
-        document.getElementById('analytics-consent').style.display = 'none';
-    }
-</script>
+        if (flags & 0x08) offset += 2; // Energy
 
-</body>
+        const rrIntervalsList = [];
+        if (rrPresent) {
+          while (offset + 1 < value.byteLength) {
+            const rawRr = value.getUint16(offset, true);
+            offset += 2;
+            const rrMs = (rawRr / 1024.0) * 1000.0;
+            rrIntervalsList.push(rrMs);
+          }
+        }
+        return { bpm, rr: rrIntervalsList };
+      }
+
+      document.getElementById("btnConnect").onclick = async () => {
+        try {
+          initAudio();
+          log("Connecting...");
+          const device = await navigator.bluetooth.requestDevice({
+            filters: [{ namePrefix: "Polar H10" }],
+            optionalServices: [SVC_PMD, SVC_HR],
+          });
+          const server = await device.gatt.connect();
+          
+          // --- UPDATED STATUS COLOR LOGIC ---
+          const st = document.getElementById("statusVal");
+          st.innerText = "CONNECTED";
+          st.className = "status-val-con"; // Green
+          
+          document.getElementById("btnConnect").disabled = true;
+          log("Connected.");
+
+          const hrSvc = await server.getPrimaryService(SVC_HR);
+          const hrCh = await hrSvc.getCharacteristic(CHR_HR);
+          await hrCh.startNotifications();
+          hrCh.addEventListener("characteristicvaluechanged", (e) => {
+            const data = parseHeartRate(e.target.value);
+            lastBleBpm = data.bpm;
+
+            // --- BLE MODE: PUSH TO SCHEDULER ---
+            if (data.rr.length > 0) {
+              data.rr.forEach((r) => {
+                bleRRIntervals.push(r);
+                bleBeatQueue.push(r);
+              });
+              updateHrvDisplay();
+            }
+
+            if (hrSource === "ble")
+              document.getElementById("hrVal").innerText = lastBleBpm;
+          });
+
+          const pmdSvc = await server.getPrimaryService(SVC_PMD);
+          const cpCh = await pmdSvc.getCharacteristic(CHR_CP);
+          const dataCh = await pmdSvc.getCharacteristic(CHR_DATA);
+          await cpCh.startNotifications();
+          log("Sending Start...");
+          await cpCh.writeValue(
+            new Uint8Array([
+              0x02, 0x00, 0x00, 0x01, 0x82, 0x00, 0x01, 0x01, 0x0e, 0x00,
+            ])
+          );
+
+          await dataCh.startNotifications();
+          dataCh.addEventListener("characteristicvaluechanged", (e) => {
+            const val = e.target.value;
+            if (val.getUint8(0) !== 0x00) return;
+            for (let i = 10; i < val.byteLength; i += 3) {
+              if (i + 2 >= val.byteLength) break;
+              let sample =
+                val.getUint8(i) |
+                (val.getUint8(i + 1) << 8) |
+                (val.getUint8(i + 2) << 16);
+              if (sample & 0x800000) sample -= 0x1000000;
+              const alpha = 0.995;
+              let filtered = alpha * (prevFiltered + sample - prevRaw);
+              prevRaw = sample;
+              prevFiltered = filtered;
+              const qrsRes = checkQRS(filtered);
+              queue.push({
+                val: filtered,
+                isBeat: qrsRes.isBeat,
+                bpm: qrsRes.bpm,
+              });
+            }
+          });
+          log("Stream Active.");
+
+          gtag("event", "connection_success", {
+            event_category: "connection",
+            event_label: "Polar H10 Stream",
+            value: 1,
+          });
+        } catch (e) {
+          log("Err: " + e.message);
+          gtag("event", "connection_error", {
+            event_category: "connection",
+            event_label: "Polar H10 Connection Error",
+            value: 0,
+          });
+          document.getElementById("btnConnect").disabled = false;
+        }
+      };
+      log("System ready. Click CONNECT H10 to start.");
+      function dismissConsent() {
+        document.getElementById("analytics-consent").style.display = "none";
+      }
+    </script>
+
+    <div
+      id="analytics-consent"
+      style="
+        position: fixed;
+        bottom: 10px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: #001100;
+        color: #0f0;
+        padding: 10px 20px;
+        text-align: center;
+        border: 2px solid #0f0;
+        border-radius: 5px;
+        z-index: 100;
+      "
+    >
+      THIS SITE USES GOOGLE ANALYTICS TO COLLECT STATISTICS.
+      <button
+        onclick="dismissConsent()"
+        style="
+          margin-left: 10px;
+          background: #0f0;
+          color: #000;
+          border: none;
+          padding: 5px 10px;
+          cursor: pointer;
+        "
+      >
+        DISMISS
+      </button>
+    </div>
+  </body>
 </html>
