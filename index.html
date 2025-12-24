@@ -314,12 +314,13 @@
         // If sampleValue is wildly huge (artifact), ignore it for AGC purposes
         if (Math.abs(sampleValue) > MAX_ECG_VAL) return;
 
-        // Normal Decay
+        // Normal Decay - Slowed down to hold envelope longer (prevent gain pumping)
+        const decay = 0.002; 
         if (sampleValue > signalMax) signalMax = sampleValue;
-        else signalMax -= (signalMax - sampleValue) * 0.005;
+        else signalMax -= (signalMax - sampleValue) * decay;
         
         if (sampleValue < signalMin) signalMin = sampleValue;
-        else signalMin += (sampleValue - signalMin) * 0.005;
+        else signalMin += (sampleValue - signalMin) * decay;
 
         let amplitude = signalMax - signalMin;
         if (amplitude < 100) amplitude = 100; 
@@ -331,9 +332,9 @@
         
         // If we are way zoomed out (gainDivisor huge) but signal is small (idealDivisor small)
         // Collapse faster!
-        let smoothing = 0.95; 
+        let smoothing = 0.99; // Was 0.95 - Increased smoothing to prevent intra-beat distortion
         if (gainDivisor > idealDivisor * 5) {
-            smoothing = 0.8; // Fast collapse
+            smoothing = 0.9; // Fast collapse
         }
 
         gainDivisor = (gainDivisor * smoothing) + (idealDivisor * (1-smoothing));
