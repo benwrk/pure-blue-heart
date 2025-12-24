@@ -1,5 +1,5 @@
 # Pure Blue Heart
-<img width="2387" height="1431" alt="image" src="https://github.com/user-attachments/assets/eae907cb-3b85-45f7-a855-e868237a9d56" />
+<img width="2387" height="1431" alt="image" src="https://github.com/user-attachments/assets/afea0d92-8305-4038-a9d5-82b2af1303d2" />
 
 A quick and dirty Polar H10 ECG monitor proof-of-concept built with pure HTML5 (plus Web Bluetooth API).
 
