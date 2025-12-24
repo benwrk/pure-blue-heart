@@ -230,6 +230,7 @@
     let hrSource = 'ble'; 
     let lastBleBpm = 0;
     let rrIntervals = [];
+    let nextBeatTime = 0; // Added for BLE beat simulation
     
     // QRS
     let qrsThreshold = 50000; 
@@ -386,10 +387,43 @@
         osc.connect(gainNode);
         gainNode.connect(audioCtx.destination);
         const now = audioCtx.currentTime;
-        if (type === 'simple') { osc.type = 'sine'; osc.frequency.setValueAtTime(1000, now); gainNode.gain.setValueAtTime(0.1, now); gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.1); osc.start(now); osc.stop(now + 0.1); }
-        else if (type === 'medical') { osc.type = 'sine'; osc.frequency.setValueAtTime(880, now); gainNode.gain.setValueAtTime(0.1, now); gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.15); osc.start(now); osc.stop(now + 0.15); }
-        else if (type === 'thud') { osc.type = 'triangle'; osc.frequency.setValueAtTime(150, now); osc.frequency.exponentialRampToValueAtTime(50, now + 0.1); gainNode.gain.setValueAtTime(0.3, now); gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.2); osc.start(now); osc.stop(now + 0.2); }
-        else if (type === '8bit') { osc.type = 'square'; osc.frequency.setValueAtTime(440, now); gainNode.gain.setValueAtTime(0.05, now); gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.1); osc.start(now); osc.stop(now + 0.1); }
+        
+        // Start at 0 to avoid clicks
+        gainNode.gain.setValueAtTime(0, now);
+
+        if (type === 'simple') { 
+            osc.type = 'sine'; 
+            osc.frequency.setValueAtTime(1000, now); 
+            gainNode.gain.linearRampToValueAtTime(0.1, now + 0.01); // Attack
+            gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.1); 
+            osc.start(now); 
+            osc.stop(now + 0.1); 
+        }
+        else if (type === 'medical') { 
+            osc.type = 'sine'; 
+            osc.frequency.setValueAtTime(880, now); 
+            gainNode.gain.linearRampToValueAtTime(0.1, now + 0.01);
+            gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.15); 
+            osc.start(now); 
+            osc.stop(now + 0.15); 
+        }
+        else if (type === 'thud') { 
+            osc.type = 'triangle'; 
+            osc.frequency.setValueAtTime(150, now); 
+            osc.frequency.exponentialRampToValueAtTime(50, now + 0.1); 
+            gainNode.gain.linearRampToValueAtTime(0.3, now + 0.01);
+            gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.2); 
+            osc.start(now); 
+            osc.stop(now + 0.2); 
+        }
+        else if (type === '8bit') { 
+            osc.type = 'square'; 
+            osc.frequency.setValueAtTime(440, now); 
+            gainNode.gain.linearRampToValueAtTime(0.05, now + 0.01);
+            gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.1); 
+            osc.start(now); 
+            osc.stop(now + 0.1); 
+        }
     }
 
     window.toggleSound = () => { soundEnabled = !soundEnabled; const btn = document.getElementById('btnSound'); if (soundEnabled) { btn.innerText = "SOUND: ON"; btn.className = "toggle-btn toggle-on"; if (audioCtx) playBeep(); } else { btn.innerText = "SOUND: MUTE"; btn.className = "toggle-btn toggle-off"; } };
@@ -421,6 +455,15 @@
         if (!lastFrameTime) lastFrameTime = timestamp;
         const dt = (timestamp - lastFrameTime) / 1000; 
         lastFrameTime = timestamp;
+
+        // BLE BEAT SIMULATION
+        if (hrSource === 'ble' && lastBleBpm > 30) {
+            if (timestamp > nextBeatTime) {
+                triggerBeat(lastBleBpm);
+                const intervalMs = (60 / lastBleBpm) * 1000;
+                nextBeatTime = timestamp + intervalMs;
+            }
+        }
 
         beatIntensity -= BEAT_DECAY;
         if (beatIntensity < 0) beatIntensity = 0;
@@ -528,7 +571,8 @@
             hrCh.addEventListener('characteristicvaluechanged', e => {
                 const hr = e.target.value.getUint8(1);
                 lastBleBpm = hr;
-                if (hrSource === 'ble') triggerBeat(hr);
+                // Removed direct triggerBeat call here, handled in loop now
+                if (hrSource === 'ble') document.getElementById('hrVal').innerText = hr;
             });
 
             const pmdSvc = await server.getPrimaryService(SVC_PMD);
