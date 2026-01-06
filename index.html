@@ -404,7 +404,9 @@
           by benwrk
         </div>
       </div>
-      <button id="btnConnect" style="padding: 8px 16px">CONNECT POLAR H10</button>
+      <button id="btnConnect" style="padding: 8px 16px">
+        CONNECT POLAR H10
+      </button>
     </header>
 
     <div id="container">
@@ -1406,16 +1408,26 @@
             filters: [{ namePrefix: "Polar H10" }],
             optionalServices: [SVC_PMD, SVC_HR],
           });
+
+          // Handle disconnection cleanup to prevent "ghost" connections
+          device.addEventListener("gattserverdisconnected", () => {
+            document.getElementById("statusVal").innerText = "DISCONNECTED";
+            document.getElementById("statusVal").className = "status-val-dis";
+            document.getElementById("btnConnect").disabled = false;
+            log("Device Disconnected");
+          });
+
           const server = await device.gatt.connect();
 
-          // --- UPDATED STATUS COLOR LOGIC ---
+          // STATUS UPDATE
           const st = document.getElementById("statusVal");
           st.innerText = "CONNECTED";
-          st.className = "status-val-con"; // Green
+          st.className = "status-val-con";
 
           document.getElementById("btnConnect").disabled = true;
           log("Connected.");
 
+          // SETUP HEART RATE SERVICE
           const hrSvc = await server.getPrimaryService(SVC_HR);
           const hrCh = await hrSvc.getCharacteristic(CHR_HR);
           await hrCh.startNotifications();
@@ -1423,7 +1435,6 @@
             const data = parseHeartRate(e.target.value);
             lastBleBpm = data.bpm;
 
-            // --- BLE MODE: PUSH TO SCHEDULER ---
             if (data.rr.length > 0) {
               data.rr.forEach((r) => {
                 bleRRIntervals.push(r);
@@ -1436,21 +1447,36 @@
               document.getElementById("hrVal").innerText = lastBleBpm;
           });
 
+          // SETUP PMD SERVICE (ECG)
           const pmdSvc = await server.getPrimaryService(SVC_PMD);
           const cpCh = await pmdSvc.getCharacteristic(CHR_CP);
           const dataCh = await pmdSvc.getCharacteristic(CHR_DATA);
+
+          // This tells us if the device REJECTS our start command
           await cpCh.startNotifications();
-          log("Sending Start...");
-          await cpCh.writeValue(
-            new Uint8Array([
-              0x02, 0x00, 0x00, 0x01, 0x82, 0x00, 0x01, 0x01, 0x0e, 0x00,
-            ])
-          );
+          cpCh.addEventListener("characteristicvaluechanged", (e) => {
+            const val = e.target.value;
+            const responseCode = val.getUint8(0);
+            const opCode = val.getUint8(1);
+            const status = val.getUint8(2);
+
+            // 0xF0 is the standard response opcode
+            if (responseCode === 0xf0) {
+              if (status === 0x00) {
+                log("Polar CP: Operation Success");
+              } else {
+                log(`Polar CP: Error! Status: ${status.toString(16)}`);
+              }
+            }
+          });
 
           await dataCh.startNotifications();
           dataCh.addEventListener("characteristicvaluechanged", (e) => {
             const val = e.target.value;
+
+            // Standard Polar PMD packet check
             if (val.getUint8(0) !== 0x00) return;
+
             for (let i = 10; i < val.byteLength; i += 3) {
               if (i + 2 >= val.byteLength) break;
               let sample =
@@ -1470,7 +1496,16 @@
               });
             }
           });
-          log("Stream Active.");
+
+          // We only send this after the data listener is fully active.
+          log("Sending Start Command...");
+          await cpCh.writeValue(
+            new Uint8Array([
+              0x02, 0x00, 0x00, 0x01, 0x82, 0x00, 0x01, 0x01, 0x0e, 0x00,
+            ])
+          );
+
+          log("Stream Active (Command Sent).");
 
           gtag("event", "connection_success", {
             event_category: "connection",
@@ -1487,6 +1522,7 @@
           document.getElementById("btnConnect").disabled = false;
         }
       };
+
       log("System ready. Click CONNECT POLAR H10 to start.");
       function dismissConsent() {
         document.getElementById("analytics-consent").style.display = "none";
