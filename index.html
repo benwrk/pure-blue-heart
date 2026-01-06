@@ -446,6 +446,31 @@
             <div id="hrVal" class="val-big">--</div>
             <canvas id="beatCanvas" width="70" height="70"></canvas>
           </div>
+
+          <!-- NEW RR DISPLAY SECTION -->
+          <div
+            style="
+              margin-top: 5px;
+              border-top: 1px dashed #030;
+              padding-top: 5px;
+            "
+          >
+            <div class="label" style="text-align: left">LAST 5 RR (MS/BPM)</div>
+            <div
+              id="rr-display-row"
+              style="
+                display: flex;
+                justify-content: space-between;
+                font-family: monospace;
+                color: #0a0;
+                font-size: 0.75rem;
+              "
+            >
+              <span>--</span><span>--</span><span>--</span><span>--</span
+              ><span>--</span>
+            </div>
+          </div>
+
           <div
             style="
               margin-top: 10px;
@@ -769,7 +794,7 @@
       let bleRRIntervals = [];
       let ecgRRIntervals = [];
       let hrvWindowSeconds = 300; // 5 MINUTES DEFAULT
-      const MAX_BUFFER_SIZE = 3000; // Enough for >20 mins @ 120bpm
+      const MAX_BUFFER_SIZE = 4000; // 200 bpm * 20 minutes
 
       // BLE RHYTHM
       let bleBeatQueue = [];
@@ -784,6 +809,7 @@
       const QRS_REFRACTORY_SAMPLES = 32;
       let totalSamplesProcessed = 0;
       let lastBeatSampleIndex = 0;
+      let ecgBpmBuffer = [];
 
       // TUNING
       let TARGET_LATENCY = 50;
@@ -824,6 +850,7 @@
           bleNextBeatTarget = 0;
         }
         log("HR Source switched to " + source.toUpperCase());
+        updateHrvDisplay(); // REFRESH UI IMMEDIATELY
       };
 
       window.setHrvSource = (source) => {
@@ -855,19 +882,15 @@
 
       function calculateFullHrv(rrs) {
         // ARTIFACT FILTERING
-        // Expanded range for EST: 2500ms (24 BPM) down to 240ms (250 BPM)
-        // This keeps valid high-intensity beats while filtering electrical noise.
-        // Note: For strict HRV analysis, non-sinus beats (PVCs) are typically excluded.
         const cleanRrs = rrs.filter((rr) => rr > 240 && rr < 2500);
-
-        if (cleanRrs.length < 30) return null;
+        if (cleanRrs.length < 5) return null;
 
         // TIME DOMAIN
         const n = cleanRrs.length;
         const mean = cleanRrs.reduce((a, b) => a + b, 0) / n;
         const sqDiffs = cleanRrs.map((v) => Math.pow(v - mean, 2));
 
-        // Use (n-1) for Sample Standard Deviation (Bessel's correction)
+        // Use (n-1) for Sample Standard Deviation
         const sdnn = Math.sqrt(sqDiffs.reduce((a, b) => a + b, 0) / (n - 1));
 
         let sumSqDiffSuccessive = 0;
@@ -878,23 +901,20 @@
           if (diff > 50) count50++;
         }
         const rmssd = Math.sqrt(sumSqDiffSuccessive / (n - 1));
-        // Prevent Log(0)
         const lnRmssd = rmssd > 0 ? Math.log(rmssd) : 0;
         const pnn50 = (count50 / (n - 1)) * 100;
 
         // FREQUENCY DOMAIN
-        // Construct Tachogram (Time axis)
         let t = [0];
         for (let i = 0; i < n; i++) t.push(t[i] + cleanRrs[i]);
-        t.shift(); // Remove initial 0 to align size
+        t.shift();
 
-        const resamplingFrequency = 4; // 4Hz resampling frequency
+        const resamplingFrequency = 4;
         const totalTime = t[t.length - 1] / 1000;
         const numSamples = Math.floor(totalTime * resamplingFrequency);
         const resampled = [];
         let rIdx = 0;
 
-        // Linear Interpolation
         for (let i = 0; i < numSamples; i++) {
           const time = i / resamplingFrequency;
           while (rIdx < t.length - 1 && t[rIdx + 1] / 1000 < time) rIdx++;
@@ -908,8 +928,7 @@
 
         if (resampled.length < 32) return null;
 
-        // LINEAR DETRENDING (Least Squares Fit)
-        // Removes the VLF slope (trend) to improve LF/HF accuracy
+        // LINEAR DETRENDING
         let sumX = 0,
           sumY = 0,
           sumXY = 0,
@@ -924,7 +943,6 @@
         const slope =
           (N_res * sumXY - sumX * sumY) / (N_res * sumXX - sumX * sumX);
         const intercept = (sumY - slope * sumX) / N_res;
-
         const signal = resampled.map((y, x) => y - (intercept + slope * x));
 
         // Apply Hanning Window
@@ -936,7 +954,7 @@
           return v * w;
         });
 
-        // DFT Calculation
+        // DFT
         let lfSum = 0,
           hfSum = 0,
           totalSum = 0;
@@ -949,18 +967,15 @@
         for (let k = 0; k < N / 2; k++) {
           const freq = (k * resamplingFrequency) / N;
           if (freq > 0.4) break;
-
           let sumReal = 0,
             sumImag = 0;
           const angleStep = (2 * Math.PI * k) / N;
-
           for (let x = 0; x < N; x++) {
             const angle = angleStep * x;
             sumReal += windowed[x] * Math.cos(angle);
             sumImag -= windowed[x] * Math.sin(angle);
           }
           const rawPower = (sumReal ** 2 + sumImag ** 2) / N;
-
           if (freq >= 0) totalSum += rawPower;
           if (freq >= 0.04 && freq < 0.15) {
             lfSum += rawPower;
@@ -976,9 +991,7 @@
             }
           }
         }
-
         const normFactor = sumWindowSq;
-
         return {
           rmssd,
           sdnn,
@@ -995,16 +1008,35 @@
       }
 
       function updateHrvDisplay() {
-        let fullHistory = hrvSource === "ble" ? bleRRIntervals : ecgRRIntervals;
+        // CAP ARRAYS (GLOBAL SAFETY)
+        if (bleRRIntervals.length > MAX_BUFFER_SIZE)
+          bleRRIntervals = bleRRIntervals.slice(-MAX_BUFFER_SIZE);
+        if (ecgRRIntervals.length > MAX_BUFFER_SIZE)
+          ecgRRIntervals = ecgRRIntervals.slice(-MAX_BUFFER_SIZE);
 
-        // BUFFER MANAGEMENT (Cap at MAX)
-        if (fullHistory.length > MAX_BUFFER_SIZE) {
-          fullHistory = fullHistory.slice(-MAX_BUFFER_SIZE);
-          if (hrvSource === "ble") bleRRIntervals = fullHistory;
-          else ecgRRIntervals = fullHistory;
+        // DISPLAY LOGIC (TOP PANEL -> uses hrSource)
+        let displayRRs = hrSource === "ble" ? bleRRIntervals : ecgRRIntervals;
+        const rrContainer = document.getElementById("rr-display-row");
+        if (rrContainer) {
+          const last5 = displayRRs.slice(-5);
+          const padded = Array(5).fill(null);
+          last5.forEach((v, i) => {
+            padded[5 - last5.length + i] = v;
+          });
+          rrContainer.innerHTML = padded
+            .map((v) => {
+              if (!v) return "<span>--</span>";
+              let val = Math.round(v);
+              let hr = Math.round(60000 / v);
+              // Added HR in parenthesis
+              return `<span>${val}<span style="color:#aaa;">/${hr}</span></span>`;
+            })
+            .join("");
         }
 
-        // --- TIME-BASED SLICING ---
+        // STATS LOGIC (BOTTOM PANEL -> uses hrvSource)
+        let fullHistory = hrvSource === "ble" ? bleRRIntervals : ecgRRIntervals;
+
         let windowedIntervals = [];
         let timeSum = 0;
         const targetMs = hrvWindowSeconds * 1000;
@@ -1134,10 +1166,18 @@
           let seconds = samplesDiff / 130.0;
           let instBpm = 60 / seconds;
           let rrMs = seconds * 1000;
-          if (instBpm > 30 && instBpm < 240) {
+
+          if (instBpm > 30 && instBpm < 250) {
             ecgRRIntervals.push(rrMs);
             updateHrvDisplay();
-            return { isBeat: true, bpm: Math.round(instBpm) };
+
+            // SMOOTHING LOGIC
+            ecgBpmBuffer.push(instBpm);
+            if (ecgBpmBuffer.length > 5) ecgBpmBuffer.shift();
+            let avgBpm =
+              ecgBpmBuffer.reduce((a, b) => a + b, 0) / ecgBpmBuffer.length;
+
+            return { isBeat: true, bpm: Math.round(avgBpm) };
           }
         }
         return { isBeat: false, bpm: 0 };
@@ -1403,7 +1443,7 @@
       }
       requestAnimationFrame(loop);
 
-      // --- PACKET PARSING ---
+      // PACKET PARSING
       function parseHeartRate(value) {
         const flags = value.getUint8(0);
         const hr16 = flags & 0x01;
@@ -1436,6 +1476,17 @@
       document.getElementById("btnConnect").onclick = async () => {
         try {
           initAudio();
+
+          // Clear previous state
+          queue = [];
+          bleRRIntervals = [];
+          ecgRRIntervals = [];
+          bleBeatQueue = [];
+          lastValidInterval = 1000;
+          screenBuffer.fill(canvas.height / 2); // ล้างหน้าจอ ECG
+          markerBuffer.fill(0);
+          updateHrvDisplay();
+
           log("Connecting...");
           const device = await navigator.bluetooth.requestDevice({
             filters: [{ namePrefix: "Polar H10" }],
