@@ -853,52 +853,81 @@
         playBeep();
       }
 
-      // --- FULL HRV CALCULATION ---
       function calculateFullHrv(rrs) {
-        if (rrs.length < 30) return null;
+        // ARTIFACT FILTERING
+        // Expanded range for EST: 2500ms (24 BPM) down to 240ms (250 BPM)
+        // This keeps valid high-intensity beats while filtering electrical noise.
+        // Note: For strict HRV analysis, non-sinus beats (PVCs) are typically excluded.
+        const cleanRrs = rrs.filter((rr) => rr > 240 && rr < 2500);
+
+        if (cleanRrs.length < 30) return null;
 
         // TIME DOMAIN
-        const n = rrs.length;
-        const mean = rrs.reduce((a, b) => a + b, 0) / n;
-        const sqDiffs = rrs.map((v) => Math.pow(v - mean, 2));
-        const sdnn = Math.sqrt(sqDiffs.reduce((a, b) => a + b, 0) / n);
+        const n = cleanRrs.length;
+        const mean = cleanRrs.reduce((a, b) => a + b, 0) / n;
+        const sqDiffs = cleanRrs.map((v) => Math.pow(v - mean, 2));
+
+        // Use (n-1) for Sample Standard Deviation (Bessel's correction)
+        const sdnn = Math.sqrt(sqDiffs.reduce((a, b) => a + b, 0) / (n - 1));
 
         let sumSqDiffSuccessive = 0;
         let count50 = 0;
         for (let i = 1; i < n; i++) {
-          let diff = Math.abs(rrs[i] - rrs[i - 1]);
+          let diff = Math.abs(cleanRrs[i] - cleanRrs[i - 1]);
           sumSqDiffSuccessive += Math.pow(diff, 2);
           if (diff > 50) count50++;
         }
         const rmssd = Math.sqrt(sumSqDiffSuccessive / (n - 1));
-        const lnRmssd = Math.log(rmssd);
+        // Prevent Log(0)
+        const lnRmssd = rmssd > 0 ? Math.log(rmssd) : 0;
         const pnn50 = (count50 / (n - 1)) * 100;
 
-        // FREQ DOMAIN
+        // FREQUENCY DOMAIN
+        // Construct Tachogram (Time axis)
         let t = [0];
-        for (let i = 0; i < n; i++) t.push(t[i] + rrs[i]);
-        t.shift();
+        for (let i = 0; i < n; i++) t.push(t[i] + cleanRrs[i]);
+        t.shift(); // Remove initial 0 to align size
 
-        const fs = 4;
+        const resamplingFrequency = 4; // 4Hz resampling frequency
         const totalTime = t[t.length - 1] / 1000;
-        const numSamples = Math.floor(totalTime * fs);
+        const numSamples = Math.floor(totalTime * resamplingFrequency);
         const resampled = [];
         let rIdx = 0;
 
+        // Linear Interpolation
         for (let i = 0; i < numSamples; i++) {
-          const time = i / fs;
+          const time = i / resamplingFrequency;
           while (rIdx < t.length - 1 && t[rIdx + 1] / 1000 < time) rIdx++;
           if (rIdx >= t.length - 1) break;
-          const t0 = t[rIdx] / 1000,
-            t1 = t[rIdx + 1] / 1000;
-          const y0 = rrs[rIdx],
-            y1 = rrs[rIdx + 1];
+          const t0 = t[rIdx] / 1000;
+          const t1 = t[rIdx + 1] / 1000;
+          const y0 = cleanRrs[rIdx];
+          const y1 = cleanRrs[rIdx + 1];
           resampled.push(y0 + ((y1 - y0) * (time - t0)) / (t1 - t0));
         }
 
-        const meanR = resampled.reduce((a, b) => a + b, 0) / resampled.length;
-        const signal = resampled.map((v) => v - meanR);
+        if (resampled.length < 32) return null;
 
+        // LINEAR DETRENDING (Least Squares Fit)
+        // Removes the VLF slope (trend) to improve LF/HF accuracy
+        let sumX = 0,
+          sumY = 0,
+          sumXY = 0,
+          sumXX = 0;
+        const N_res = resampled.length;
+        for (let i = 0; i < N_res; i++) {
+          sumX += i;
+          sumY += resampled[i];
+          sumXY += i * resampled[i];
+          sumXX += i * i;
+        }
+        const slope =
+          (N_res * sumXY - sumX * sumY) / (N_res * sumXX - sumX * sumX);
+        const intercept = (sumY - slope * sumX) / N_res;
+
+        const signal = resampled.map((y, x) => y - (intercept + slope * x));
+
+        // Apply Hanning Window
         let sumWindowSq = 0;
         const windowed = signal.map((v, i) => {
           const w =
@@ -907,6 +936,7 @@
           return v * w;
         });
 
+        // DFT Calculation
         let lfSum = 0,
           hfSum = 0,
           totalSum = 0;
@@ -917,13 +947,15 @@
 
         const N = windowed.length;
         for (let k = 0; k < N / 2; k++) {
-          const freq = (k * fs) / N;
+          const freq = (k * resamplingFrequency) / N;
           if (freq > 0.4) break;
 
           let sumReal = 0,
             sumImag = 0;
+          const angleStep = (2 * Math.PI * k) / N;
+
           for (let x = 0; x < N; x++) {
-            const angle = (2 * Math.PI * k * x) / N;
+            const angle = angleStep * x;
             sumReal += windowed[x] * Math.cos(angle);
             sumImag -= windowed[x] * Math.sin(angle);
           }
@@ -1283,6 +1315,7 @@
         timeAccumulator += dt;
         const step = 1 / currentPlaybackRate;
 
+        // Clear ahead
         let clearStart = Math.floor(screenCursor + 2);
         let clearEnd = Math.floor(screenCursor + 15);
         for (let i = clearStart; i <= clearEnd; i++) {
@@ -1489,11 +1522,15 @@
               prevRaw = sample;
               prevFiltered = filtered;
               const qrsRes = checkQRS(filtered);
-              queue.push({
-                val: filtered,
-                isBeat: qrsRes.isBeat,
-                bpm: qrsRes.bpm,
-              });
+
+              // MEMORY SAFETY: Prevent queue explosion on slow tabs
+              if (queue.length < 4000) {
+                queue.push({
+                  val: filtered,
+                  isBeat: qrsRes.isBeat,
+                  bpm: qrsRes.bpm,
+                });
+              }
             }
           });
 
