@@ -331,6 +331,36 @@
         display: block;
       }
 
+      /* RR GRID (LAST 25) */
+      .rr-grid {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 2px 4px;
+        font-family: monospace;
+        color: #0a0;
+        font-size: 0.7rem;
+        text-align: center;
+        overflow: hidden;
+        transition: max-height 0.3s ease;
+        max-height: 200px; /* Expanded state (enough for 5 rows) */
+      }
+      .rr-grid.collapsed {
+        max-height: 16px; /* Collapsed state (approx 1 row) */
+      }
+
+      /* CUSTOM ARROW FOR RR SECTION */
+      #lbl-rr::after {
+        content: "▼";
+        font-size: 0.8em;
+        transition: 0.2s;
+        opacity: 0.7;
+        float: right;
+      }
+      #lbl-rr.collapsed::after {
+        transform: rotate(-90deg);
+        opacity: 0.4;
+      }
+
       /* HRV GRID (UNIFIED NEON THEME) */
       .hrv-header {
         text-align: left;
@@ -447,7 +477,7 @@
             <canvas id="beatCanvas" width="70" height="70"></canvas>
           </div>
 
-          <!-- NEW RR DISPLAY SECTION -->
+          <!-- RR DISPLAY SECTION (LAST 25) -->
           <div
             style="
               margin-top: 5px;
@@ -455,19 +485,17 @@
               padding-top: 5px;
             "
           >
-            <div class="label" style="text-align: left">LAST 5 RR (MS/BPM)</div>
+            <!-- Label with arrow logic -->
             <div
-              id="rr-display-row"
-              style="
-                display: flex;
-                justify-content: space-between;
-                font-family: monospace;
-                color: #0a0;
-                font-size: 0.75rem;
-              "
+              id="lbl-rr"
+              class="label main-label collapsed"
+              onclick="toggleRRGrid()"
             >
-              <span>--</span><span>--</span><span>--</span><span>--</span
-              ><span>--</span>
+              LASTEST BEATS (MS/BPM)
+            </div>
+            <!-- Grid container -->
+            <div id="rr-display-grid" class="rr-grid collapsed">
+              <!-- Will be populated by JS -->
             </div>
           </div>
 
@@ -827,6 +855,14 @@
         panel.classList.toggle("collapsed");
       };
 
+      // NEW TOGGLE LOGIC FOR RR GRID
+      window.toggleRRGrid = () => {
+        const grid = document.getElementById("rr-display-grid");
+        const lbl = document.getElementById("lbl-rr");
+        grid.classList.toggle("collapsed");
+        lbl.classList.toggle("collapsed");
+      };
+
       // --- LOGIC ---
       window.adjSweep = (delta) => {
         sweepSpeedMm += delta;
@@ -1008,33 +1044,36 @@
       }
 
       function updateHrvDisplay() {
-        // CAP ARRAYS (GLOBAL SAFETY)
+        // 1. CAP ARRAYS (GLOBAL SAFETY)
         if (bleRRIntervals.length > MAX_BUFFER_SIZE)
           bleRRIntervals = bleRRIntervals.slice(-MAX_BUFFER_SIZE);
         if (ecgRRIntervals.length > MAX_BUFFER_SIZE)
           ecgRRIntervals = ecgRRIntervals.slice(-MAX_BUFFER_SIZE);
 
-        // DISPLAY LOGIC (TOP PANEL -> uses hrSource)
+        // 2. DISPLAY LOGIC (TOP PANEL -> uses hrSource) -> LAST 25
         let displayRRs = hrSource === "ble" ? bleRRIntervals : ecgRRIntervals;
-        const rrContainer = document.getElementById("rr-display-row");
-        if (rrContainer) {
-          const last5 = displayRRs.slice(-5);
-          const padded = Array(5).fill(null);
-          last5.forEach((v, i) => {
-            padded[5 - last5.length + i] = v;
-          });
-          rrContainer.innerHTML = padded
+        const rrGrid = document.getElementById("rr-display-grid");
+
+        if (rrGrid) {
+          // Get last 25, Reverse so Newest is Top-Left (Index 0)
+          const last25 = displayRRs.slice(-25).reverse();
+          // Always ensure 25 cells for the grid
+          const padded = Array(25).fill(null);
+          for (let i = 0; i < last25.length; i++) {
+            padded[i] = last25[i];
+          }
+
+          rrGrid.innerHTML = padded
             .map((v) => {
               if (!v) return "<span>--</span>";
               let val = Math.round(v);
               let hr = Math.round(60000 / v);
-              // Added HR in parenthesis
               return `<span>${val}<span style="color:#aaa;">/${hr}</span></span>`;
             })
             .join("");
         }
 
-        // STATS LOGIC (BOTTOM PANEL -> uses hrvSource)
+        // 3. STATS LOGIC (BOTTOM PANEL -> uses hrvSource)
         let fullHistory = hrvSource === "ble" ? bleRRIntervals : ecgRRIntervals;
 
         let windowedIntervals = [];
@@ -1443,7 +1482,7 @@
       }
       requestAnimationFrame(loop);
 
-      // PACKET PARSING
+      // --- PACKET PARSING ---
       function parseHeartRate(value) {
         const flags = value.getUint8(0);
         const hr16 = flags & 0x01;
