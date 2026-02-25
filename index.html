@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -41,12 +41,14 @@
         transition: 0.2s;
         font-size: 0.8rem;
       }
+
       button:hover,
       select:hover {
         background: #0f0;
         color: #000;
         box-shadow: 0 0 10px #0f0;
       }
+
       button:disabled {
         background: #222;
         color: #555;
@@ -55,6 +57,7 @@
         cursor: not-allowed;
         opacity: 0.5;
       }
+
       select {
         width: 100%;
         margin-top: 5px;
@@ -73,10 +76,12 @@
       #chart-area {
         flex: 1;
         position: relative;
-        background: linear-gradient(rgba(0, 50, 0, 0.2) 1px, transparent 1px),
+        background:
+          linear-gradient(rgba(0, 50, 0, 0.2) 1px, transparent 1px),
           linear-gradient(90deg, rgba(0, 50, 0, 0.2) 1px, transparent 1px);
         background-size: 50px 50px;
       }
+
       canvas {
         display: block;
         width: 100%;
@@ -97,18 +102,22 @@
         scrollbar-width: thin;
         scrollbar-color: #0f0 #001100;
       }
+
       #sidebar::-webkit-scrollbar {
         width: 10px;
       }
+
       #sidebar::-webkit-scrollbar-track {
         background: #001100;
         border-left: 1px solid #030;
       }
+
       #sidebar::-webkit-scrollbar-thumb {
         background: #0f0;
         border: 2px solid #001100;
         border-radius: 5px;
       }
+
       #sidebar::-webkit-scrollbar-thumb:hover {
         background: #fff;
       }
@@ -127,16 +136,19 @@
         flex-shrink: 0;
         z-index: 20;
       }
+
       .status-item {
         display: flex;
         align-items: center;
         gap: 5px;
         white-space: nowrap;
       }
+
       /* STATUS COLORS */
       .status-val-dis {
         color: #ff5555;
       }
+
       .status-val-con {
         color: #0f0;
       }
@@ -145,6 +157,7 @@
         color: #040;
         font-weight: bold;
       }
+
       .buffer-track {
         flex: 1;
         height: 8px;
@@ -153,6 +166,7 @@
         position: relative;
         max-width: 150px;
       }
+
       .buffer-fill {
         height: 100%;
         background: #0f0;
@@ -179,6 +193,7 @@
         display: none;
         box-shadow: -5px -5px 15px rgba(0, 50, 0, 0.5);
       }
+
       #log-toggle-btn {
         position: absolute;
         bottom: 10px;
@@ -196,9 +211,11 @@
         transition: all 0.2s;
         flex-shrink: 0;
       }
+
       .panel.collapsed > *:not(.main-label) {
         display: none !important;
       }
+
       .panel.collapsed {
         padding-bottom: 4px;
         border-color: #040;
@@ -211,6 +228,7 @@
         text-transform: uppercase;
         letter-spacing: 1px;
       }
+
       .main-label {
         cursor: pointer;
         display: flex;
@@ -219,16 +237,19 @@
         user-select: none;
         font-weight: bold;
       }
+
       .main-label::after {
         content: "▼";
         font-size: 0.8em;
         transition: 0.2s;
         opacity: 0.7;
       }
+
       .panel.collapsed .main-label::after {
         transform: rotate(-90deg);
         opacity: 0.4;
       }
+
       .panel.collapsed .main-label {
         margin-bottom: 0;
         color: #080;
@@ -245,6 +266,7 @@
         padding: 5px;
         border-radius: 4px;
       }
+
       .control-val {
         font-weight: bold;
         color: #fff;
@@ -259,10 +281,12 @@
         font-size: 0.8rem;
         margin-top: 5px;
       }
+
       .toggle-on {
         background: #0f0;
         color: #000;
       }
+
       .toggle-off {
         background: #300;
         color: #888;
@@ -274,6 +298,7 @@
         gap: 5px;
         margin-bottom: 5px;
       }
+
       .mode-btn {
         flex: 1;
         font-size: 0.65rem;
@@ -282,6 +307,7 @@
         color: #080;
         background: #020;
       }
+
       .mode-btn.active {
         background: #0f0;
         color: #000;
@@ -294,10 +320,12 @@
         border-bottom: 1px dotted #030;
         padding-bottom: 2px;
       }
+
       .log-time {
         color: #080;
         margin-right: 5px;
       }
+
       .log-data {
         color: #cfc;
         display: block;
@@ -314,6 +342,7 @@
         height: 70px;
         margin: 5px 0;
       }
+
       .val-big {
         font-size: 4rem;
         font-weight: bold;
@@ -321,6 +350,7 @@
         line-height: 1;
         z-index: 1;
       }
+
       #beatCanvas {
         position: absolute;
         left: calc(50% + 60px);
@@ -342,10 +372,13 @@
         text-align: center;
         overflow: hidden;
         transition: max-height 0.3s ease;
-        max-height: 200px; /* Expanded state (enough for 5 rows) */
+        max-height: 200px;
+        /* Expanded state (enough for 5 rows) */
       }
+
       .rr-grid.collapsed {
-        max-height: 16px; /* Collapsed state (approx 1 row) */
+        max-height: 16px;
+        /* Collapsed state (approx 1 row) */
       }
 
       /* CUSTOM ARROW FOR RR SECTION */
@@ -356,6 +389,7 @@
         opacity: 0.7;
         float: right;
       }
+
       #lbl-rr.collapsed::after {
         transform: rotate(-90deg);
         opacity: 0.4;
@@ -369,14 +403,17 @@
         font-weight: bold;
         margin-top: 10px;
         margin-bottom: 5px;
-        border-bottom: 1px solid #060; /* Solid line */
+        border-bottom: 1px solid #060;
+        /* Solid line */
         padding-bottom: 2px;
       }
+
       .hrv-grid {
         display: grid;
         grid-template-columns: 1fr 1fr;
         gap: 8px;
       }
+
       .hrv-card {
         background: #001500;
         padding: 8px;
@@ -384,16 +421,20 @@
         text-align: left;
         border: 1px solid #060;
       }
+
       .hrv-card-val {
         font-size: 1.2rem;
         font-weight: bold;
-        color: #0f0; /* NEON GREEN VALUE */
+        color: #0f0;
+        /* NEON GREEN VALUE */
       }
+
       .hrv-card-unit {
         font-size: 0.7rem;
         color: #8a8;
         margin-left: 2px;
       }
+
       .hrv-card-lbl {
         font-size: 0.6rem;
         color: #0a0;
@@ -401,11 +442,13 @@
         margin-top: 2px;
         display: block;
       }
+
       .hrv-full {
         grid-column: span 2;
       }
     </style>
   </head>
+
   <body>
     <script
       async
@@ -785,14 +828,16 @@
         STATUS: <span id="statusVal" class="status-val-dis">DISCONNECTED</span>
       </div>
       <div class="status-item status-sep">|</div>
-
       <div class="status-item">
         ECG PLAYBACK RATE: <span id="actSpd" style="color: yellow">-- Hz</span>
       </div>
-      <div class="buffer-track">
+      <div class="status-item">ECG BUFFER:</div>
+      <div class="buffer-track" style="margin-left: -5px; margin-right: -5px">
         <div id="bufBar" class="buffer-fill"></div>
       </div>
-      <div class="status-item">ECG BUFFER: <span id="bufStat">0 ms</span></div>
+      <div class="status-item">
+        <span id=" bufStat">0 ms</span>
+      </div>
       <div style="flex: 1"></div>
       <div style="font-size: 0.6rem; color: #444">
         Pure Blue Heart | &copy; benwrk | made with &hearts; in Bangkok
@@ -1138,7 +1183,7 @@
           try {
             if (typeof data === "object")
               dataHtml = `<span class="log-data">${JSON.stringify(
-                data
+                data,
               )}</span>`;
             else dataHtml = `<span class="log-data">Value: ${data}</span>`;
           } catch (e) {}
@@ -1411,10 +1456,21 @@
           currentPlaybackRate.toFixed(1) + " Hz";
         document.getElementById("bufStat").innerText =
           bufferMs.toFixed(0) + " ms";
-        const barW = Math.min((bufferMs / 500) * 100, 100);
+        document.getElementById("bufStat").style.color =
+          bufferMs > 1000
+            ? "red"
+            : bufferMs < 100 || bufferMs > 750
+              ? "yellow"
+              : "#0f0";
+
+        const barW = Math.min((bufferMs / 1000) * 100, 100);
         document.getElementById("bufBar").style.width = barW + "%";
         document.getElementById("bufBar").style.background =
-          barW < 2 ? "red" : "#0f0";
+          bufferMs > 1000
+            ? "red"
+            : bufferMs < 100 || bufferMs > 750
+              ? "yellow"
+              : "#0f0";
 
         timeAccumulator += dt;
         const step = 1 / currentPlaybackRate;
@@ -1654,7 +1710,7 @@
           await cpCh.writeValue(
             new Uint8Array([
               0x02, 0x00, 0x00, 0x01, 0x82, 0x00, 0x01, 0x01, 0x0e, 0x00,
-            ])
+            ]),
           );
 
           log("Stream Active (Command Sent).");
